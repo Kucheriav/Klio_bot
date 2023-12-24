@@ -29,6 +29,29 @@ def drop_bot_db():
     connection.close()
 
 
+def drop_table(table):
+    connection = connect(host="localhost", user="root", password='123456A%', database='excursion_bot_db')
+    cursor = connection.cursor()
+    query = f"""
+             DROP TABLE {table}
+             """
+    cursor.execute(query)
+    connection.commit()
+    connection.close()
+
+
+def describe_table(table):
+    connection = connect(host="localhost", user="root", password='123456A%', database='excursion_bot_db')
+    show_table_query = f"DESCRIBE {table}"
+    with connection.cursor() as cursor:
+        cursor.execute(show_table_query)
+        # Fetch rows from last executed query
+        result = cursor.fetchall()
+        for row in result:
+            print(row)
+    connection.close()
+
+
 def create_excursion_table():
     connection = connect(host="localhost", user="root", password='123456A%', database='excursion_bot_db')
     cursor = connection.cursor()
@@ -37,7 +60,7 @@ def create_excursion_table():
         id INT AUTO_INCREMENT PRIMARY KEY,
         title VARCHAR(100),
         description VARCHAR(1000),
-        duration TIME
+        duration INT
     )
     """
     cursor.execute(query)
@@ -75,6 +98,8 @@ def create_visit_table():
          excursion_id INT,
          date DATE,
          time TIME,
+         link VARCHAR(30) DEFAULT 'no',
+         visitors INT DEFAULT 0,
          FOREIGN KEY(excursion_id) REFERENCES excursions(id)
      )
      """
@@ -85,10 +110,11 @@ def create_visit_table():
 def get_open_visits():
     connection = connect(host="localhost", user="root", password='123456A%', database='excursion_bot_db')
     cursor = connection.cursor()
-    query = f"""SELECT visits.id, excursions.description, visits.date, visits.time, excursions.duration
+    query = f"""SELECT visits.id, excursions.title, excursions.description, visits.date, visits.time, excursions.duration
     FROM excursions
     INNER JOIN visits
-    ON visits.excursion_id = excursion.id
+    ON visits.excursion_id = excursions.id
+    WHERE visits.link = 'no'
     """
     cursor.execute(query)
     result = cursor.fetchall()
@@ -114,18 +140,6 @@ def accept_visit():
     pass
 
 
-# def get_field_from_db(table, field='*'):
-#     connection = connect(host="localhost", user="root", password='123456A%', database='excursion_bot_db')
-#     cursor = connection.cursor()
-#     query = f"""
-#     SELECT {field}
-#     FROM {table}
-#
-#     """
-#     cursor.execute(query, )
-#     connection.commit()
-#     connection.close()
-#
 
 
 #show_all_db()

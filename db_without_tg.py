@@ -15,7 +15,7 @@ def adding_excursion_handler():
             break
         else:
             print('Введем заново')
-    add_excursion(title, description, duration)
+    add_new_excursion(title, description, duration)
 
 def adding_vitis_handler():
     print('Режим добавления посещений')
@@ -24,7 +24,7 @@ def adding_vitis_handler():
         print(*res)
     while True:
         n = input('Введите номер экскурсии: ')
-        if n in map(lambda x: x[0], result):
+        if n in map(lambda x: str(x[0]), result):
             break
         else:
             print('Неправильный ввод. Попробуйте еще раз')
