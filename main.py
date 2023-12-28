@@ -23,6 +23,6 @@ def say_hello(message):
         bot.send_message(message.chat.id, "У меня нет имени..")
 
     else:
-
+        pass
 
 bot.infinity_polling()

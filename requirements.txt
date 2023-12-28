@@ -1,0 +1,4 @@
+mysql-connector-python~=8.2.0
+SQLAlchemy~=2.0.23
+mysqlclient~=2.2.1
+sqlalchemy-utils~=0.41.1

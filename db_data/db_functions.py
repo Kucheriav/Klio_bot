@@ -1,55 +1,64 @@
 from mysql.connector import connect
+from mysql.connector import MySQLConnection
+from db_data.db_config_reader import read_db_config
+# https://www.internet-technologies.ru/articles/posobie-po-mysql-na-python.html#header-9658-6
 
 
-def show_all_db():
-    connection = connect(host="localhost", user="root", password='123456A%')
-    cursor = connection.cursor()
-    show_db_query = "SHOW DATABASES"
-    cursor.execute(show_db_query)
-    for db in cursor:
-        print(db)
-    connection.close()
+def get_all_db():
+    with connect(host="localhost", user="root", password='123456A%') as connection:
+        cursor = connection.cursor()
+        show_db_query = "SHOW DATABASES"
+        cursor.execute(show_db_query)
+        return [db[0] for db in cursor]
 
-def create_bot_db():
-    connection = connect(host="localhost", user="root", password='123456A%')
-    cursor = connection.cursor()
-    query = "CREATE DATABASE excursion_bot_db"
-    cursor.execute(query)
-    connection.commit()
-    connection.close()
+def create_bot_db(db):
+    with connect(host="localhost", user="root", password='123456A%') as connection:
+        cursor = connection.cursor()
+        query = f"CREATE DATABASE {db}"
+        cursor.execute(query)
+        connection.commit()
 
-def drop_bot_db():
-    connection = connect(host="localhost", user="root", password='123456A%')
-    cursor = connection.cursor()
-    query = """
-         DROP DATABASE excursion_bot_db
-         """
-    cursor.execute(query)
-    connection.commit()
-    connection.close()
 
+def drop_bot_db(db):
+    db_config = read_db_config()
+    with MySQLConnection(**db_config) as connection:
+        cursor = connection.cursor()
+        query = f"""
+             DROP DATABASE {db}
+             """
+        cursor.execute(query)
+        connection.commit()
+
+def show_tables(db):
+    db_config = read_db_config()
+    with MySQLConnection(**db_config) as connection:
+        cursor = connection.cursor()
+        query = f"SHOW TABLES FROM {db}"
+        cursor.execute(query)
+        return [table[0] for table in cursor]
 
 def drop_table(table):
-    connection = connect(host="localhost", user="root", password='123456A%', database='excursion_bot_db')
-    cursor = connection.cursor()
-    query = f"""
-             DROP TABLE {table}
-             """
-    cursor.execute(query)
-    connection.commit()
-    connection.close()
+    if table in show_tables()
+    db_config = read_db_config()
+    with MySQLConnection(**db_config) as connection:
+        cursor = connection.cursor()
+        query = f"""
+                 DROP TABLE {table}
+                 """
+        cursor.execute(query)
+        connection.commit()
 
 
 def describe_table(table):
-    connection = connect(host="localhost", user="root", password='123456A%', database='excursion_bot_db')
-    show_table_query = f"DESCRIBE {table}"
-    with connection.cursor() as cursor:
+    db_config = read_db_config()
+    with MySQLConnection(**db_config) as connection:
+        show_table_query = f"DESCRIBE {table}"
+        cursor = connection.cursor()
         cursor.execute(show_table_query)
-        # Fetch rows from last executed query
         result = cursor.fetchall()
         for row in result:
             print(row)
-    connection.close()
+
 
 
 def create_excursion_table():
@@ -140,7 +149,7 @@ def accept_visit():
     pass
 
 
-
-
-#show_all_db()
+if __name__ == '__main__':
+    a = get_all_db()
+    print(a)
 

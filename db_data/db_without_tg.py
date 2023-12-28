@@ -1,4 +1,4 @@
-from db_functions import *
+from db_data.db_functions import *
 
 
 def adding_excursion_handler():
