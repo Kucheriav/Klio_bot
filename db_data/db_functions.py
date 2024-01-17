@@ -38,7 +38,7 @@ def show_tables(db):
         return [table[0] for table in cursor]
 
 def drop_table(table):
-    if table in show_tables()
+    # if table in show_tables()
     db_config = read_db_config()
     with MySQLConnection(**db_config) as connection:
         cursor = connection.cursor()
@@ -150,6 +150,6 @@ def accept_visit():
 
 
 if __name__ == '__main__':
-    a = get_all_db()
-    print(a)
+    pass
+    # drop_bot_db('excursion_bot_db')
 
