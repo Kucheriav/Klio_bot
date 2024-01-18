@@ -1,9 +1,14 @@
 import telebot
 from telebot import types # для указание типов
-
+from db_data import db_models, db_functions
 name_tg = '@hist_museum_bot'
 API_TOKEN = "rtytryrty"
 bot = telebot.TeleBot(API_TOKEN)
+db_functions.database_init()
+
+
+
+
 
 
 @bot.message_handler(content_types=['text'])

@@ -3,6 +3,8 @@ from db_data.db_config_reader import read_db_config
 from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
 from sqlalchemy_utils import database_exists, create_database
 from datetime import datetime
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -17,11 +19,11 @@ class Excursion(Base):
     visits = relationship('Visit', back_populates='excursions')
 
 
-class Visit(Base):
+class Schedule(Base):
     __tablename__ = 'visits'
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    excursions_id = Column(Integer, ForeignKey('excursions.id'))
+    excursion_id = Column(Integer, ForeignKey('excursions.id'))
     excursions = relationship('Excursion', back_populates='visits')
     #может ли дата/время быть ключом?
     date_time = Column(DateTime)
@@ -54,19 +56,19 @@ def enter_some_excursions_info():
         session.commit()
 
 
-def enter_some_events():
+def add_window(excursion_id=1, date_time=datetime(year=2024, month=1, day=30, hour=12, minute=30)):
     with sessionmaker(bind=engine)() as session:
-        visitor = Visit(
-            excursions_id=1,
-            date_time=datetime(year=2024, month=1, day=30, hour=12, minute=30),
+        window = Schedule(
+            excursion_id=excursion_id,
+            date_time=date_time,
         )
-        session.add(visitor)
+        session.add(window)
         session.commit()
 
-def add_some_visitors(current_visit: Visit):
+def application_for_visit(current_visit: Schedule, link='mysite.org', visitors=6):
     with sessionmaker(bind=engine)() as session:
-        current_visit.link = 'mysite.org'
-        current_visit.visitors = 6
+        current_visit.link = link
+        current_visit.visitors = visitors
 
         session.merge(current_visit)
         session.commit()
@@ -74,7 +76,7 @@ def add_some_visitors(current_visit: Visit):
 
 def cross_table_query_visits():
     with sessionmaker(bind=engine)() as session:
-        data = session.query(Visit, Excursion.title).join(Excursion).all()
+        data = session.query(Schedule, Excursion.title).join(Excursion).all()
         # возвращется список списков [[объект Visit, Excursion.title], [] ....]
         for el in data:
             print(el[0].id, el[1], el[0].date_time, el[0].link, el[0].visitors)
@@ -92,7 +94,6 @@ if __name__ == '__main__':
     engine = create_engine(url)
     if not database_exists(engine.url):
         create_database(engine.url)
-    print(database_exists(engine.url))
     Base.metadata.create_all(bind=engine)
     cross_table_query_visits()
 
