@@ -65,13 +65,7 @@ def add_window(excursion_id=1, date_time=datetime(year=2024, month=1, day=30, ho
         session.add(window)
         session.commit()
 
-def application_for_visit(current_visit: Schedule, link='mysite.org', visitors=6):
-    with sessionmaker(bind=engine)() as session:
-        current_visit.link = link
-        current_visit.visitors = visitors
 
-        session.merge(current_visit)
-        session.commit()
 
 
 def cross_table_query_visits():
