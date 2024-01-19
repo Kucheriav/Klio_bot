@@ -27,32 +27,24 @@ class Schedule(Base):
     excursions = relationship('Excursion', back_populates='visits')
     #может ли дата/время быть ключом?
     date_time = Column(DateTime)
-    link = Column(String(50))
+    link = Column(String(100))
+    name = Column(String(300))
     visitors = Column(Integer)
 
 
 
-def enter_some_excursions_info():
+def add_test_excursions():
     with sessionmaker(bind=engine)() as session:
-        excursion = Excursion(
-            title='Калужская Область в годы Великой Отечественной войны',
-            description="В ходе экскурсии музейный актив рассказывает посетителям о том, что происходило на "
-                        "территории Калужской области в 1941-1945гг. Экскурсоводы показывают коллекцию фронтовой посуды "
-                        "и уникальные издания памяток, где увековечены имена воинов, отдавших жизни за нашу землю. В конце "
-                        "рассказа посетители могут пройти тест и посоревноваться с интерактивным помощником в том, "
-                        "сколько они запомнили.",
-            duration = '20'
-        )
-        session.add(excursion)
-        excursion = Excursion(
-            title='Дети - герои',
-            description="В ходе мероприятия экскурсоводы рассказывают о детях, совершивших подвиги ради Родины - Саше "
-                        "Чекалине и Лёне Голикове. Затем знакомят посетителей с таким понятием как «пионер» и "
-                        "рассказывают о подробностях посвящения. Интерактивный помощник Клио помогает показать ребятам "
-                        "видео с этой самой церемонии.",
-            duration='15'
-        )
-        session.add(excursion)
+        with open('test_excursions.txt', encoding='utf8') as file:
+            excursions, windows = file.read().split('-#-')
+            excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in excursions.split('@')]
+            excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in excursions]
+        for excursion in excursions:
+            session.add(Excursion(
+                title=excursion[0],
+                description=excursion[2],
+                duration =excursion[1]
+            ))
         session.commit()
 
 

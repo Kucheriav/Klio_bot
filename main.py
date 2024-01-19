@@ -1,6 +1,8 @@
 import telebot
 from telebot import types # для указание типов
 from db_data import db_functions
+
+
 name_tg = '@hist_museum_bot'
 API_TOKEN = "frgfdhgdf"
 bot = telebot.TeleBot(API_TOKEN)
@@ -35,10 +37,10 @@ def say_hello(message):
     elif (message.text == "Запись на экскурсию"):
         info = db_functions.get_current_windows(session)
         text = 'Вот доступные экскурсии\n'
-        text += info
+        text += '---------------\n'.join(['\n'.join(variant[1:]) for variant in info])
         text += '\nУкажите номер'
         bot.send_message(message.chat.id, text)
-        bot.register_next_step_handler(message, who_are_you, info)
+        bot.register_next_step_handler(message, who_are_you, [x[0] for x in info])
 
     elif (message.text == "Секрет"):
         bot.send_message(message.chat.id, text='Привет Администратор!')
@@ -48,36 +50,37 @@ def say_hello(message):
 
 
 @bot.message_handler(content_types=['text'])
-def who_are_you(message, info):
+def who_are_you(message, id_list):
     try:
         n = int(message.text.strip())
     except Exception:
         print('Error this is not number!')
-    except n <= len(info):
+    except n <= len(id_list):
         print('Wrong number')
     else:
         text = "как вас записать?"
         bot.send_message(message.chat.id, text)
-        info.append(n)
-        bot.register_next_step_handler(message, how_many, info)
+        this_id = id_list[n - 1]
+        bot.register_next_step_handler(message, how_many, this_id)
 
 
 @bot.message_handler(content_types=['text'])
-def how_many(message, info):
+def how_many(message, this_id):
+    visit = [this_id, message.from_user.username, message.text]
     text = "сколько вас?"
-    info.append(message.text)
     bot.send_message(message.chat.id, text)
-    bot.register_next_step_handler(message, result, info)
+    bot.register_next_step_handler(message, result, visit)
 
 
 @bot.message_handler(content_types=['text'])
-def result(message, info):
+def result(message, visit):
+    visit.append(message.text)
     try:
-        pass
+        db_functions.application_for_visit(session, visit)
     except:
-        pass
+        bot.send_message(message.chat.id, text='Ошибка БД. Обратитесь к разработчику')
     else:
-        bot.send_message(message.chat.id, text='ура вы записаны!')
+        bot.send_message(message.chat.id, text='Ура, вы записаны!')
 
 @bot.message_handler(content_types=['text'])
 def admin_panel(message):

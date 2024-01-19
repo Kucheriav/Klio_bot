@@ -1,6 +1,3 @@
-from mysql.connector import connect
-from mysql.connector import MySQLConnection
-from db_data.db_config_reader import read_db_config
 from db_data.db_models import *
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
@@ -33,14 +30,21 @@ def recreate_db():
 
 
 def get_current_windows(session):
-    data = session.query(Excursion.title, Schedule.date_time).join(Excursion).filter(
-        Schedule.link == '', Schedule.date_time >= datetime.now())
+    data = session.query(Schedule.id, Excursion.title, Excursion.description, Schedule.date_time).join(Excursion).filter(
+        Schedule.link == '', Schedule.date_time >= datetime.now()).all()
+    for i in range(len(data)):
+        data[i].insert(1, (i + 1))
     return data
 
+def get_this_window(session, this_id) -> Schedule:
+    data = session.query(Schedule).filter(Schedule.id==this_id)
+    return data
 
-def application_for_visit(current_visit: Schedule, link='mysite.org', visitors=6):
-    with sessionmaker(bind=engine)() as session:
-        current_visit.link = link
-        current_visit.visitors = visitors
-        session.merge(current_visit)
-        session.commit()
+def application_for_visit(session, visit_info):
+    #visit_info = [id, username, name,  number]
+    current_visit = get_this_window(session, visit_info[0])
+    current_visit.link = 'https://t.me/' + visit_info[1]
+    current_visit.name = visit_info[2]
+    current_visit.visitors = visit_info[3]
+    session.merge(current_visit)
+    session.commit()
