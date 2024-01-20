@@ -1,5 +1,11 @@
-with open('test_excursions.txt', encoding='utf8') as file:
-    excursions, windows = file.read().split('-#-')
-    excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in excursions.split('@')]
-    excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in excursions]
-    print(excursions)
+import datetime
+
+# with open('test_visits.txt', encoding='utf8') as file:
+#     visits = list(map(lambda x: x.split(), file.read().split('-')))
+#     for visit in visits:
+#         d = datetime.datetime.strptime(visit[1], '%d.%m.%y')
+#         print(d)
+
+
+d = datetime.datetime.strptime(visit[1], '%d.%m.%y')
+print(d)

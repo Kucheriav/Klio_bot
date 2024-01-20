@@ -37,7 +37,7 @@ def say_hello(message):
     elif (message.text == "Запись на экскурсию"):
         info = db_functions.get_current_windows(session)
         text = 'Вот доступные экскурсии\n'
-        text += '---------------\n'.join(['\n'.join(variant[1:]) for variant in info])
+        text += get_windows_info(info)
         text += '\nУкажите номер'
         bot.send_message(message.chat.id, text)
         bot.register_next_step_handler(message, who_are_you, [x[0] for x in info])
@@ -89,6 +89,18 @@ def admin_panel(message):
 #     1. выводить таблицу текущих экскурсий (название дата кто записан кол-во)
 #     2. добавлять окошки
 #     3. удалять окошки
+
+
+
+
+def get_windows_info(info):
+    res = ''
+    for variant in info:
+        res += f'{variant[1]}. {variant[2]} \n'
+        res += f'{variant[3]}\n'
+        res += f'Длительность: {variant[4]} минут.'
+        res += '---------------\n'
+    return res
 
 
 

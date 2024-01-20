@@ -15,8 +15,11 @@ class Excursion(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String(60))
     description = Column(String(1000))
-    duration = Column(Integer)
-    visits = relationship('Visit', back_populates='excursions')
+    duration = Column(String)
+    visits = relationship('Schedule', back_populates='excursions')
+
+    def __str__(self):
+        return f'''{self.title}\n{self.description}\n{self.duration}'''
 
 
 class Schedule(Base):
@@ -31,21 +34,9 @@ class Schedule(Base):
     name = Column(String(300))
     visitors = Column(Integer)
 
+    def __str__(self):
+        return f'''{self.excursion_id}  {self.date_time}  {self.link}  {self.name}  {self.visitors}'''
 
-
-def add_test_excursions():
-    with sessionmaker(bind=engine)() as session:
-        with open('test_excursions.txt', encoding='utf8') as file:
-            excursions, windows = file.read().split('-#-')
-            excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in excursions.split('@')]
-            excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in excursions]
-        for excursion in excursions:
-            session.add(Excursion(
-                title=excursion[0],
-                description=excursion[2],
-                duration =excursion[1]
-            ))
-        session.commit()
 
 
 def add_window(excursion_id=1, date_time=datetime(year=2024, month=1, day=30, hour=12, minute=30)):

@@ -7,6 +7,7 @@ import datetime
 SESSION = None
 ENGINE = None
 
+###service fucntions
 def database_init():
     global SESSION, ENGINE
     configs = read_db_config()
@@ -24,11 +25,47 @@ def database_init():
     return SESSION
 
 
-
 def recreate_db():
+    database_init()
     drop_database(ENGINE.url)
+    database_init()
+
+###test functions
+def add_test_excursions(session):
+    with open('test_excursions.txt', encoding='utf8') as file:
+        excursions, windows = file.read().split('-#-')
+        excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in excursions.split('@')]
+        excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in excursions]
+    for excursion in excursions:
+        session.add(Excursion(
+            title=excursion[0],
+            description=excursion[2],
+            duration=excursion[1].split()[0]
+        ))
+    session.commit()
+
+def get_all_excursions(session):
+    data = session.query(Excursion).all()
+    return data
 
 
+def add_test_windows(session):
+    with open('test_visits.txt', encoding='utf8') as file:
+        visits = list(map(lambda x: x.split(), file.read().split('-')))
+    for visit in visits:
+        session.add(Schedule(
+            excursion_id=int(visit[0]),
+            date_time=datetime.datetime.strptime(visit[1], '%d.%m.%Y')
+        ))
+    session.commit()
+
+
+def get_all_windows(session):
+    data = session.query(Schedule).all()
+    return data
+
+
+##user functions
 def get_current_windows(session):
     data = session.query(Schedule.id, Excursion.title, Excursion.description, Schedule.date_time).join(Excursion).filter(
         Schedule.link == '', Schedule.date_time >= datetime.now()).all()
@@ -48,3 +85,47 @@ def application_for_visit(session, visit_info):
     current_visit.visitors = visit_info[3]
     session.merge(current_visit)
     session.commit()
+
+
+####admin functions
+def get_current_visits(session):
+    data = session.query(Excursion.title, Schedule.date_time, Schedule.name, Schedule.link, Schedule.visitors).join(
+        Excursion).filter(
+        Schedule.link != '', Schedule.date_time >= datetime.now()).all()
+    return data
+
+def add_window(session, title, date_time):
+    excursion_id = session.query(Excursion.id).filter(Excursion.title == title).one()
+    try:
+        date_time = datetime.datetime.strptime(date_time, '%d.%m.%Y')
+    except Exception:
+        raise
+
+    session.add(Schedule(
+        excursion_id=excursion_id,
+        date_time=date_time
+    ))
+
+def update_window(session):
+    pass
+
+def delete_window(session):
+    pass
+
+def add_excursion(session):
+    pass
+
+def update_excursion(session):
+    pass
+
+def delete_excursion(session):
+    pass
+
+
+
+database_init()
+# add_test_excursions(SESSION)
+add_test_windows(SESSION)
+lines = get_all_windows(SESSION)
+for line in lines:
+    print(line)
