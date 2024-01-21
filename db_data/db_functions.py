@@ -1,6 +1,7 @@
-from db_data.db_models import *
+from db_models import *
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
+from ..errors import *
 import datetime
 # https://www.internet-technologies.ru/articles/posobie-po-mysql-na-python.html#header-9658-6
 
@@ -99,12 +100,13 @@ def add_window(session, title, date_time):
     try:
         date_time = datetime.datetime.strptime(date_time, '%d.%m.%Y')
     except Exception:
-        raise
+        raise DateInputError
+    else:
 
-    session.add(Schedule(
-        excursion_id=excursion_id,
-        date_time=date_time
-    ))
+        session.add(Schedule(
+            excursion_id=excursion_id,
+            date_time=date_time
+        ))
 
 def update_window(session):
     pass
