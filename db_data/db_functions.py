@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 from ..errors import *
 import datetime
 # https://www.internet-technologies.ru/articles/posobie-po-mysql-na-python.html#header-9658-6
-
+# with sessionmaker(bind=engine)() as session:
 SESSION = None
 ENGINE = None
 
@@ -66,6 +66,11 @@ def get_all_windows(session):
     return data
 
 
+def get_this_window(session, this_id) -> Schedule:
+    data = session.query(Schedule).filter(Schedule.id==this_id)
+    return data
+
+
 ##user functions
 def get_current_windows(session):
     data = session.query(Schedule.id, Excursion.title, Excursion.description, Schedule.date_time).join(Excursion).filter(
@@ -74,9 +79,6 @@ def get_current_windows(session):
         data[i].insert(1, (i + 1))
     return data
 
-def get_this_window(session, this_id) -> Schedule:
-    data = session.query(Schedule).filter(Schedule.id==this_id)
-    return data
 
 def application_for_visit(session, visit_info):
     #visit_info = [id, username, name,  number]
@@ -95,6 +97,7 @@ def get_current_visits(session):
         Schedule.link != '', Schedule.date_time >= datetime.now()).all()
     return data
 
+
 def add_window(session, title, date_time):
     excursion_id = session.query(Excursion.id).filter(Excursion.title == title).one()
     try:
@@ -102,26 +105,41 @@ def add_window(session, title, date_time):
     except Exception:
         raise DateInputError
     else:
-
         session.add(Schedule(
             excursion_id=excursion_id,
             date_time=date_time
         ))
+        session.commit()
+
 
 def update_window(session):
     pass
 
-def delete_window(session):
-    pass
 
-def add_excursion(session):
-    pass
+def delete_window(session, window_id):
+    window = session.query(Schedule).filter_by(id=window_id).one()
+    session.delete(window)
+    session.commit()
+
+
+def add_excursion(session,title, description, duration):
+    session.add(Excursion(
+        title=title,
+        description=description,
+        duration=duration
+    ))
+    session.commit()
+
 
 def update_excursion(session):
     pass
 
-def delete_excursion(session):
-    pass
+
+def delete_excursion(session, ex_id):
+    excursion = session.query(Excursion).filter_by(id=ex_id).one()
+    session.delete(excursion)
+    session.commit()
+
 
 
 
