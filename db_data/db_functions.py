@@ -1,17 +1,19 @@
 from db_models import *
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
-from ..errors import *
+import errors
 import datetime
+import os
 # https://www.internet-technologies.ru/articles/posobie-po-mysql-na-python.html#header-9658-6
 # with sessionmaker(bind=engine)() as session:
 SESSION = None
 ENGINE = None
 
-###service fucntions
-def database_init():
+###service functions
+def database_init(path):
     global SESSION, ENGINE
-    configs = read_db_config()
+    print()
+    configs = read_db_config(os.path.join(path, 'config.ini'))
     url = "mysql://%(user)s:%(password)s@%(host)s/%(db)s" % {
         'user': configs['user'],
         'password': configs['password'],
@@ -74,9 +76,15 @@ def get_this_window(session, this_id) -> Schedule:
 ##user functions
 def get_current_windows(session):
     data = session.query(Schedule.id, Excursion.title, Excursion.description, Schedule.date_time).join(Excursion).filter(
-        Schedule.link == '', Schedule.date_time >= datetime.now()).all()
+        Schedule.link == '', Schedule.date_time >= datetime.datetime.now()).all()
     for i in range(len(data)):
         data[i].insert(1, (i + 1))
+    return data
+
+
+def get_current_windows_names(session):
+    data = (session.query(Excursion.title).join(Schedule).
+            filter(Schedule.link == '', Schedule.date_time >= datetime.datetime.now()).all())
     return data
 
 
@@ -103,7 +111,7 @@ def add_window(session, title, date_time):
     try:
         date_time = datetime.datetime.strptime(date_time, '%d.%m.%Y')
     except Exception:
-        raise DateInputError
+        raise errors.DateInputError
     else:
         session.add(Schedule(
             excursion_id=excursion_id,
@@ -142,10 +150,9 @@ def delete_excursion(session, ex_id):
 
 
 
-
-database_init()
-# add_test_excursions(SESSION)
-add_test_windows(SESSION)
-lines = get_all_windows(SESSION)
-for line in lines:
-    print(line)
+if __name__ == '__main__':
+    database_init(os.getcwd())
+    add_test_excursions(SESSION)
+    add_test_windows(SESSION)
+    print(get_all_windows(SESSION))
+    print('ok')

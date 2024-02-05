@@ -15,13 +15,13 @@ class Excursion(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     title = Column(String(60))
     description = Column(String(1000))
-    duration = Column(String)
+    duration = Column(String(60))
     visits = relationship('Schedule', back_populates='excursions')
 
     def __str__(self):
         return f'''{self.title}\n{self.description}\n{self.duration}'''
 
-
+#timetable
 class Schedule(Base):
     __tablename__ = 'visits'
 
