@@ -1,13 +1,13 @@
 import telebot
 from telebot import types # для указание типов
-from db_data import db_functions
+#from db_data import db_functions
 import os
 
-API_TOKEN = "fghgfhfghgf"
+API_TOKEN = "6428204535:AAHaYkp0ljreKLnOMQ7v1ib0WX7ZrawXu_o"
 ADMINS = [1756860408, 1672823252, 130612247]
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
-session = db_functions.database_init(os.path.join(os.getcwd(), 'db_data'))
+# session = db_functions.database_init(os.path.join(os.getcwd(), 'db_data'))
 
 
 @bot.message_handler(content_types=['text'])
@@ -63,10 +63,15 @@ def work(message):
     #     bot.register_next_step_handler(message, who_are_you, info)
 
     elif (message.text == "💻Панель администратора"):
-        bot.send_message(message.chat.id, text='Привет Администратор!')
-        #кнопки выбора функций:
 
-        bot.register_next_step_handler(message, admin_panel)
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        btn1 = types.KeyboardButton("📝Расписание")
+        btn2 = types.KeyboardButton("🛢Время экскурсий")
+        markup.add(btn1, btn2)
+        btn3 = types.KeyboardButton("ℹ️Выставки")
+        btn4 = types.KeyboardButton("🥃Экскурсии")
+        markup.add(btn3, btn4)
+        bot.send_message(message.chat.id, text='Привет Администратор!', reply_markup=markup)
     else:
         bot.send_message(message.chat.id, "Я Вас не понимаю. Попробуйте ещё раз.")
 
