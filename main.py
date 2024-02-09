@@ -2,7 +2,7 @@ import telebot
 from telebot import types # для указание типов
 from db_data.db_functions import *
 
-API_TOKEN = "6428204535:AAHaYkp0ljreKLnOMQ7v1ib0WX7ZrawXu_o"
+API_TOKEN = ""
 ADMINS = [1756860408, 1672823252, 130612247]
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
