@@ -1,14 +1,12 @@
 import telebot
 from telebot import types # для указание типов
-#from db_data import db_functions
-import os
+from db_data.db_functions import *
 
 API_TOKEN = "6428204535:AAHaYkp0ljreKLnOMQ7v1ib0WX7ZrawXu_o"
 ADMINS = [1756860408, 1672823252, 130612247]
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
-# session = db_functions.database_init(os.path.join(os.getcwd(), 'db_data'))
-
+session, _ = database_init()
 
 @bot.message_handler(content_types=['text'])
 def work(message):
@@ -82,7 +80,7 @@ def callback_inline(call):
     if call.message:
         if call.data == 'zapis':
             keyboard = types.ReplyKeyboardMarkup()
-            windows_names = db_functions.get_current_windows_names(session)
+            windows_names = get_current_windows_names(session)
             print(windows_names)
             # keyboard.add(types.KeyboardButton(callback_data='sa', text=f'hgf❓'))
             for name in windows_names:
