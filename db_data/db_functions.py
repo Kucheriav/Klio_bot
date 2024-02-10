@@ -3,12 +3,10 @@ from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
 import errors
 from datetime import datetime
-import os
-# https://www.internet-technologies.ru/articles/posobie-po-mysql-na-python.html#header-9658-6
-# with sessionmaker(bind=engine)() as session:
 
 
-###service functions
+
+### системные функции
 def database_init():
     configs = read_db_config()
     url = "mysql://%(user)s:%(password)s@%(host)s/%(db)s" % {
@@ -31,14 +29,14 @@ def recreate_db():
     session, engine = database_init()
     return session, engine
 
-###test functions
+### добавление тестовой инфы
 def add_test_data_classes(session):
     with open('test_data.txt', encoding='utf8') as file:
         new_excursions, open_visits = file.read().split('-#-')
         new_excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in new_excursions.split('@')]
         new_excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in new_excursions]
         open_visits = list(map(lambda x: x.split(), open_visits.split('-')))
-
+    print(len(new_excursions))
     for excursion in new_excursions:
         session.add(Excursion(title=excursion[0], description=excursion[2], duration=excursion[1].split()[0]))
     for visit in open_visits:
@@ -46,6 +44,7 @@ def add_test_data_classes(session):
     session.commit()
 
 
+### общие функции
 def get_all_excursions(session):
     data = session.query(Excursion).all()
     return data
@@ -53,38 +52,44 @@ def get_all_excursions(session):
 
 def get_all_windows(session):
     data = session.query(Schedule).all()
-
     return data
 
 
 def get_this_window(session, this_id) -> Schedule:
-    data = session.query(Schedule).filter(Schedule.id == this_id)
+    data = session.query(Schedule).filter(Schedule.id == this_id).one()
     return data
 
 
-##user functions
-def get_current_windows(session):
-    data = session.query(Schedule.id, Excursion.title, Excursion.description, Schedule.date_time).join(Excursion).filter(
-        Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all()
-    for i in range(len(data)):
-        data[i].insert(1, (i + 1))
-    return data
-
-
+### пользовательские функции
+## начало ветки записи на посещение
 def get_current_windows_names(session):
     data = (session.query(Excursion.title).join(Schedule).
             filter(Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all())
+    data = set([x[0] for x in data])
     return data
 
+def get_actual_dates_by_name(session, title):
+    dates = session.query(Schedule.date_time).join(Excursion).filter(Excursion.title == title,
+                                                                     Schedule.date_time >= datetime.now()).all()
+    dates = [x[0] for x in dates]
+    return dates
 
-def application_for_visit(session, visit_info):
-    #visit_info = [id, username, name,  number]
-    current_visit = get_this_window(session, visit_info[0])
-    current_visit.contact_link = 'https://t.me/' + visit_info[1]
-    current_visit.contact_name = visit_info[2]
-    current_visit.visitors = visit_info[3]
-    session.merge(current_visit)
+def window_id_by_title_and_date(session, title, date):
+    window_id = session.query(Schedule.id).join(Excursion).filter(Excursion.title == title,
+                                                                  Schedule.date_time == date).all()
+    return window_id[0][0]
+
+
+def add_visit(session, visit_info):
+    #visit_info = [window_id, contact_link, contact_name,  number]
+    this_visit = get_this_window(session, visit_info[0])
+    this_visit.contact_link = 'https://t.me/' + visit_info[1]
+    this_visit.contact_name = visit_info[2]
+    this_visit.visitors = visit_info[3]
+    session.merge(this_visit)
     session.commit()
+    return 'ok'
+##конец ветки записи на посещение
 
 
 ####admin functions

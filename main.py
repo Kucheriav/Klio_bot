@@ -2,11 +2,15 @@ import telebot
 from telebot import types # для указание типов
 from db_data.db_functions import *
 
-API_TOKEN = ""
+API_TOKEN = "6428204535:AAHaYkp0ljreKLnOMQ7v1ib0WX7ZrawXu_o"
 ADMINS = [1756860408, 1672823252, 130612247]
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
+
+# из-за многоэтапной процедуры выбора экскурсии нам надо как-то хранить состояние пользователя
+# тогда можно сократить кол-во запросов к бд, сразу выдергивая, например, объекты окошек целиком,
+# а не бегать за каждый клочком инфы на очередном этапе регистрации на экскурсию
 
 @bot.message_handler(content_types=['text'])
 def work(message):
@@ -48,17 +52,11 @@ def work(message):
                          "Записаться на экскурсию можно в кабинете 301 на третьем этаже или нажав на кнопку ниже. Мы всегда рады вас видеть и подберем удобное время!",
                          reply_markup=keyboard)
 
-    elif (message.text == "📝Запись на экскурсию"):
-        bot.send_message(message.chat.id,
-                         "У нас есть экспозиции, которые мы развиваем и которыми гордимся!  «Калужский край - душа России»,  «Ничто не забыто, никто не забыт», «История школы»")
+    # этого же уже нет на клавиатуре? удалить?
+    # elif (message.text == "📝Запись на экскурсию"):
+    #     bot.send_message(message.chat.id,
+    #                      "У нас есть экспозиции, которые мы развиваем и которыми гордимся!  «Калужский край - душа России»,  «Ничто не забыто, никто не забыт», «История школы»")
 
-    # elif (message.text == "Запись на экскурсию"):
-    #     info = db_functions.get_current_windows(session)
-    #     text = 'Вот доступные экскурсии\n'
-    #     text += info
-    #     text += '\nУкажите номер'
-    #     bot.send_message(message.chat.id, text)
-    #     bot.register_next_step_handler(message, who_are_you, info)
 
     elif (message.text == "💻Панель администратора"):
 
@@ -71,6 +69,7 @@ def work(message):
         markup.add(btn3, btn4)
         bot.send_message(message.chat.id, text='Привет Администратор!', reply_markup=markup)
     else:
+        print(message.text)
         bot.send_message(message.chat.id, "Я Вас не понимаю. Попробуйте ещё раз.")
 
 
@@ -81,15 +80,21 @@ def callback_inline(call):
         if call.data == 'zapis':
             keyboard = types.ReplyKeyboardMarkup()
             windows_names = get_current_windows_names(session)
-            print(windows_names)
-            # keyboard.add(types.KeyboardButton(callback_data='sa', text=f'hgf❓'))
-            for name in windows_names:
-                # cleaned_data = re.sub(r'[^a-z0-9_\-]', '', i.strip().lower())
-                keyboard.add(types.KeyboardButton(text=f'{name}'))
-            bot.send_message(call.message.chat.id, f"На данный момент можно записаться на следующие экскурсии: 👇",
-                             reply_markup=keyboard)
+            # for name in windows_names:
+            #     # cleaned_data = re.sub(r'[^a-z0-9_\-]', '', i.strip().lower())
+            #     keyboard.add(types.KeyboardButton(text=f'{name}'))
+            # bot.send_message(call.message.chat.id, f"На данный момент можно записаться на следующие экскурсии: 👇",
+            #                  reply_markup=keyboard)
 
-            # bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="На данный момент можно записаться на следующие экскурсии", reply_markup=markup)
+            keyboard = types.InlineKeyboardMarkup()
+            for i, name in enumerate(windows_names):
+                callback_button = types.InlineKeyboardButton(text=name, callback_data=f'кря {i + 1}')
+                keyboard.add(callback_button)
+            bot.send_message(call.message.chat.id, "На данный момент можно записаться на следующие экскурсии: 👇",
+                             reply_markup=keyboard)
+        elif 'кря' in call.data:
+            print('кайф!')
+
 
 #
 # @bot.message_handler(content_types=['text'])
@@ -135,15 +140,6 @@ def admin_panel(message):
 
 
 
-
-def get_windows_info(info):
-    res = ''
-    for variant in info:
-        res += f'{variant[1]}. {variant[2]} \n'
-        res += f'{variant[3]}\n'
-        res += f'Длительность: {variant[4]} минут.'
-        res += '---------------\n'
-    return res
 
 
 
