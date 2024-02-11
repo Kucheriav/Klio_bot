@@ -1,12 +1,16 @@
 import telebot
 from telebot import types # для указание типов
 from db_data.db_functions import *
+from users_states import User
 
-API_TOKEN = ""
+
+
+API_TOKEN = "6428204535:AAHaYkp0ljreKLnOMQ7v1ib0WX7ZrawXu_o"
 ADMINS = [1756860408, 1672823252, 130612247]
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
+users_states = dict()
 
 # из-за многоэтапной процедуры выбора экскурсии нам надо как-то хранить состояние пользователя
 # тогда можно сократить кол-во запросов к бд, сразу выдергивая, например, объекты окошек целиком,
@@ -46,7 +50,7 @@ def work(message):
                          "Наш музейный актив - увлеченные, заинтересованные ребята! Знакомьтесь! Бекетова Влада, Иващенко Лиза, Мосина Вика, Кондрашов Паша, Бессуднов Артём, Коцебук Настя, Синица Лера, Арсений - экскурсоводы и активисты музея.")
     elif message.text == "❓Как попасть на экскурсию в музей?":
         keyboard = types.InlineKeyboardMarkup()
-        callback_button = types.InlineKeyboardButton(text="📝Запись на экскурсию", callback_data='zapis')
+        callback_button = types.InlineKeyboardButton(text="📝Запись на экскурсию", callback_data='excursion_info')
         keyboard.add(callback_button)
         bot.send_message(message.chat.id,
                          "Записаться на экскурсию можно в кабинете 301 на третьем этаже или нажав на кнопку ниже. Мы всегда рады вас видеть и подберем удобное время!",
@@ -75,60 +79,60 @@ def work(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
-    global ex
     if call.message:
-        if call.data == 'zapis':
-            keyboard = types.ReplyKeyboardMarkup()
-            windows_names = get_current_windows_names(session)
-            # for name in windows_names:
-            #     # cleaned_data = re.sub(r'[^a-z0-9_\-]', '', i.strip().lower())
-            #     keyboard.add(types.KeyboardButton(text=f'{name}'))
-            # bot.send_message(call.message.chat.id, f"На данный момент можно записаться на следующие экскурсии: 👇",
-            #                  reply_markup=keyboard)
-
+        if call.data == 'excursion_info':
+            users_states[call.message.chat.id] = User()
+            windows_names = sorted(list(get_current_windows_names(session)))
+            users_states[call.message.chat.id].actual_excursions = windows_names[:]
             keyboard = types.InlineKeyboardMarkup()
             for i, name in enumerate(windows_names):
-                callback_button = types.InlineKeyboardButton(text=name, callback_data=f'кря {i + 1}')
+                callback_button = types.InlineKeyboardButton(text=name, callback_data=f'excursion_choice.{i}')
                 keyboard.add(callback_button)
             bot.send_message(call.message.chat.id, "На данный момент можно записаться на следующие экскурсии: 👇",
                              reply_markup=keyboard)
-        elif 'кря' in call.data:
-            print('кайф!')
+        elif call.data.startswith('excursion_choice'):
+            excursion_choice = users_states[call.message.chat.id].actual_excursions[int(call.data.split('.')[1])]
+            users_states[call.message.chat.id].excursion_choice = excursion_choice
+            dates = sorted(list(get_actual_dates_by_name(session, excursion_choice)))
+            users_states[call.message.chat.id].actual_dates = dates[:]
+            keyboard = types.InlineKeyboardMarkup()
+            for i, date in enumerate(dates):
+                callback_button = types.InlineKeyboardButton(text=date.strftime("%d.%m.%Y"), callback_data=f'date_choice.{i}')
+                keyboard.add(callback_button)
+            text = ''
+            text += excursion_choice + '\n'
+            text += get_description_by_title(session, excursion_choice)+ '\n'
+            text += "На данный момент можно записаться на следующие даты: 👇"
+            bot.send_message(call.message.chat.id, text,
+                             reply_markup=keyboard)
+        elif call.data.startswith('date_choice'):
+            date_choice = users_states[call.message.chat.id].actual_dates[int(call.data.split('.')[1])]
+            users_states[call.message.chat.id].date_choice = date_choice
+            text = 'Как вас записать? (укажите имя)'
+            bot.send_message(call.message.chat.id, text)
+            bot.register_next_step_handler(call.message, how_many)
 
 
-#
-# @bot.message_handler(content_types=['text'])
-# def who_are_you(message, id_list):
-#     try:
-#         n = int(message.text.strip())
-#     except Exception:
-#         print('Error this is not number!')
-#     except n >= len(id_list):
-#         print('Wrong number')
-#     else:
-#         text = "как вас записать?"
-#         bot.send_message(message.chat.id, text)
-#         this_id = id_list[n - 1]
-#         bot.register_next_step_handler(message, how_many, this_id)
+
+@bot.message_handler(content_types=['text'])
+def how_many(message):
+    users_states[message.chat.id].contact_name = message.text
+    users_states[message.chat.id].contact_link = message.from_user.username
+    text = "сколько вас?"
+    bot.send_message(message.chat.id, text)
+    bot.register_next_step_handler(message, confirm)
 
 
-# @bot.message_handler(content_types=['text'])
-# def how_many(message, this_id):
-#     visit = [this_id, message.from_user.username, message.text]
-#     text = "сколько вас?"
-#     bot.send_message(message.chat.id, text)
-#     bot.register_next_step_handler(message, result, visit)
+@bot.message_handler(content_types=['text'])
+def confirm(message):
+    number = message.text
+    window_id = window_id_by_title_and_date(session, users_states[message.chat.id].excursion_choice,
+                                            users_states[message.chat.id].date_choice)
+    # visit_info = [window_id, contact_link, contact_name,  number]
+    result = add_visit(session, [window_id, users_states[message.chat.id].contact_link,
+                                 users_states[message.chat.id].contact_name, number])
 
-
-# @bot.message_handler(content_types=['text'])
-# def result(message, visit):
-#     visit.append(message.text)
-#     try:
-#         db_functions.application_for_visit(session, visit)
-#     except:
-#         bot.send_message(message.chat.id, text='Ошибка БД. Обратитесь к разработчику')
-#     else:
-#         bot.send_message(message.chat.id, text='Ура, вы записаны!')
+    bot.send_message(message.chat.id, text=result)
 
 @bot.message_handler(content_types=['text'])
 def admin_panel(message):

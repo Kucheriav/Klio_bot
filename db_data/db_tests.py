@@ -16,7 +16,7 @@ def straight_choosing_scenario():
     title = 'Фронтовая посуда'
     print(f'Выбрано: {title}')
     s = get_actual_dates_by_name(session, title)
-    print(*s, sep='\n')
+    print(*map(lambda x: x.strftime("%d.%m.%Y"), s), sep='\n')
     date_time = datetime.strptime('22.05.2024', '%d.%m.%Y')
     print(f'Выбрано: {date_time}')
     this_id = window_id_by_title_and_date(session, title, date_time)

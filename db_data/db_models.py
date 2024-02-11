@@ -29,7 +29,7 @@ class Schedule(Base):
     date_time = Column(DateTime)
     contact_link = Column(String(100), DefaultClause(''))
     contact_name = Column(String(300), DefaultClause(''))
-    visitors = Column(Integer, DefaultClause('0'))
+    visitors = Column(String(100), DefaultClause('0'))
     UniqueConstraint('excursion_id', 'date_time')
 
     def __str__(self):

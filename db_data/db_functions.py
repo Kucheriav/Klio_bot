@@ -68,6 +68,10 @@ def get_current_windows_names(session):
     data = set([x[0] for x in data])
     return data
 
+def get_description_by_title(session, title):
+    data = session.query(Excursion.description).filter(Excursion.title == title).one()[0]
+    return data
+
 def get_actual_dates_by_name(session, title):
     dates = session.query(Schedule.date_time).join(Excursion).filter(Excursion.title == title,
                                                                      Schedule.date_time >= datetime.now()).all()
@@ -145,5 +149,5 @@ def delete_excursion(session, ex_id):
 
 if __name__ == '__main__':
     session, engine = database_init()
-    print(get_all_windows(session))
-    print('ok')
+    print(*get_all_windows(session), sep='\n')
+
