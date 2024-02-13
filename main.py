@@ -6,19 +6,17 @@ from users_states import User
 
 
 API_TOKEN = ""
-ADMINS = [1756860408, 1672823252, 130612247]
+ADMINS = [1756860408, 1672823252, 130612247, 803045715]
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
 users_states = dict()
 
-# из-за многоэтапной процедуры выбора экскурсии нам надо как-то хранить состояние пользователя
-# тогда можно сократить кол-во запросов к бд, сразу выдергивая, например, объекты окошек целиком,
-# а не бегать за каждый клочком инфы на очередном этапе регистрации на экскурсию
 
 @bot.message_handler(content_types=['text'])
 def work(message):
     q = message.chat.id
+    print(message.from_user.id)
     if message.text == '/start':
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         btn1 = types.KeyboardButton("❗Моё имя")
@@ -55,15 +53,7 @@ def work(message):
         bot.send_message(message.chat.id,
                          "Записаться на экскурсию можно в кабинете 301 на третьем этаже или нажав на кнопку ниже. Мы всегда рады вас видеть и подберем удобное время!",
                          reply_markup=keyboard)
-
-    # этого же уже нет на клавиатуре? удалить?
-    # elif (message.text == "📝Запись на экскурсию"):
-    #     bot.send_message(message.chat.id,
-    #                      "У нас есть экспозиции, которые мы развиваем и которыми гордимся!  «Калужский край - душа России»,  «Ничто не забыто, никто не забыт», «История школы»")
-
-
     elif (message.text == "💻Панель администратора"):
-
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         btn1 = types.KeyboardButton("📝Расписание")
         btn2 = types.KeyboardButton("🛢Время экскурсий")
@@ -80,6 +70,7 @@ def work(message):
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     if call.message:
+        # по нажатию на "запись на экскурсию" вываливаем актуальные экскурсии
         if call.data == 'excursion_info':
             users_states[call.message.chat.id] = User()
             windows_names = sorted(list(get_current_windows_names(session)))
@@ -90,6 +81,7 @@ def callback_inline(call):
                 keyboard.add(callback_button)
             bot.send_message(call.message.chat.id, "На данный момент можно записаться на следующие экскурсии: 👇",
                              reply_markup=keyboard)
+        # по нажатию на конкретную экскурсию вываливаем актуальные даты
         elif call.data.startswith('excursion_choice'):
             excursion_choice = users_states[call.message.chat.id].actual_excursions[int(call.data.split('.')[1])]
             users_states[call.message.chat.id].excursion_choice = excursion_choice
@@ -105,6 +97,7 @@ def callback_inline(call):
             text += "На данный момент можно записаться на следующие даты: 👇"
             bot.send_message(call.message.chat.id, text,
                              reply_markup=keyboard)
+        # по нажатию на конкретную дату продолжаем ветку через register_next_step_handler, уточняем детали
         elif call.data.startswith('date_choice'):
             date_choice = users_states[call.message.chat.id].actual_dates[int(call.data.split('.')[1])]
             users_states[call.message.chat.id].date_choice = date_choice
@@ -128,24 +121,11 @@ def confirm(message):
     number = message.text
     window_id = window_id_by_title_and_date(session, users_states[message.chat.id].excursion_choice,
                                             users_states[message.chat.id].date_choice)
-    # visit_info = [window_id, contact_link, contact_name,  number]
+    # ожидаемые аргументы: сессия и [window_id, contact_link, contact_name,  number]
     result = add_visit(session, [window_id, users_states[message.chat.id].contact_link,
                                  users_states[message.chat.id].contact_name, number])
 
     bot.send_message(message.chat.id, text=result)
-
-@bot.message_handler(content_types=['text'])
-def admin_panel(message):
-    print(123213123)
-# для админов:
-#     1. выводить таблицу текущих экскурсий (название дата кто записан кол-во)
-#     2. добавлять окошки
-#     3. удалять окошки
-
-
-
-
-
 
 
 bot.infinity_polling()

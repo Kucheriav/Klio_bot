@@ -1,7 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, UniqueConstraint, DefaultClause
-from db_data.db_config_reader import read_db_config
-from sqlalchemy.orm import DeclarativeBase, relationship, sessionmaker
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, UniqueConstraint, DefaultClause
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
@@ -34,6 +32,15 @@ class Schedule(Base):
 
     def __str__(self):
         return f'''{self.excursion_id}  {self.date_time}  {self.contact_link}  {self.contact_name}  {self.visitors}'''
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    name = Column(String(300))
+    link = Column(String(100))
+    tg_id = Column(Integer())
+    is_admin = Column(Boolean())
 
 
 

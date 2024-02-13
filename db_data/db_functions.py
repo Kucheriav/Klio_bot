@@ -1,6 +1,8 @@
 from db_data.db_models import *
+from db_data.db_config_reader import read_db_config
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import errors
 from datetime import datetime
 
@@ -36,7 +38,6 @@ def add_test_data_classes(session):
         new_excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in new_excursions.split('@')]
         new_excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in new_excursions]
         open_visits = list(map(lambda x: x.split(), open_visits.split('-')))
-    print(len(new_excursions))
     for excursion in new_excursions:
         session.add(Excursion(title=excursion[0], description=excursion[2], duration=excursion[1].split()[0]))
     for visit in open_visits:

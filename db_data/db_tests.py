@@ -32,5 +32,5 @@ def drop_db_scenario():
 
 if __name__ == '__main__':
     drop_db_scenario()
-    straight_choosing_scenario()
+    # straight_choosing_scenario()
 
