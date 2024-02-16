@@ -5,18 +5,17 @@ from users_states import User
 
 
 
-API_TOKEN = ""
-ADMINS = [1756860408, 1672823252, 130612247, 803045715]
+API_TOKEN = "6428204535:AAHaYkp0ljreKLnOMQ7v1ib0WX7ZrawXu_o"
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
+ADMINS_IDS = get_admins_ids(session)
 users_states = dict()
 
 
 @bot.message_handler(content_types=['text'])
 def work(message):
     q = message.chat.id
-    print(message.from_user.id)
     if message.text == '/start':
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         btn1 = types.KeyboardButton("❗Моё имя")
@@ -27,7 +26,7 @@ def work(message):
         markup.add(btn3, btn4)
         btn_zap = types.KeyboardButton('❓Как попасть на экскурсию в музей?')
         markup.add(btn_zap)
-        if message.from_user.id in ADMINS:
+        if message.from_user.id in ADMINS_IDS:
             admbtn = types.KeyboardButton("💻Панель администратора")
             markup.add(admbtn)
 

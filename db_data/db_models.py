@@ -42,6 +42,8 @@ class User(Base):
     tg_id = Column(Integer())
     is_admin = Column(Boolean())
 
+    def __str__(self):
+        return f'''{self.name}  {self.link}  {self.tg_id}  {self.is_admin}'''
 
 
 # def add_window(excursion_id=1, date_time=datetime(year=2024, month=1, day=30, hour=12, minute=30)):

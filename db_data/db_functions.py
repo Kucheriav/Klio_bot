@@ -31,19 +31,6 @@ def recreate_db():
     session, engine = database_init()
     return session, engine
 
-### добавление тестовой инфы
-def add_test_data_classes(session):
-    with open('test_data.txt', encoding='utf8') as file:
-        new_excursions, open_visits = file.read().split('-#-')
-        new_excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in new_excursions.split('@')]
-        new_excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in new_excursions]
-        open_visits = list(map(lambda x: x.split(), open_visits.split('-')))
-    for excursion in new_excursions:
-        session.add(Excursion(title=excursion[0], description=excursion[2], duration=excursion[1].split()[0]))
-    for visit in open_visits:
-        session.add(Schedule(excursion_id=int(visit[0]), date_time=datetime.strptime(visit[1], '%d.%m.%Y')))
-    session.commit()
-
 
 ### общие функции
 def get_all_excursions(session):
@@ -55,6 +42,13 @@ def get_all_windows(session):
     data = session.query(Schedule).all()
     return data
 
+def get_all_users(session):
+    data = session.query(User).all()
+    return data
+
+def get_admins_ids(session):
+    data = session.query(User.tg_id).filter(User.is_admin == True).all()
+    return [x[0] for x in data]
 
 def get_this_window(session, this_id) -> Schedule:
     data = session.query(Schedule).filter(Schedule.id == this_id).one()
@@ -152,3 +146,4 @@ if __name__ == '__main__':
     session, engine = database_init()
     print(*get_all_windows(session), sep='\n')
 
+    print(get_admins_ids(session))
