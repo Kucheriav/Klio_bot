@@ -35,7 +35,7 @@ def recreate_db():
 ### общие функции
 def get_all_excursions(session):
     data = session.query(Excursion).all()
-    return data
+    return [(x.title, x.description, x.duration)  for x in data]
 
 
 def get_all_windows(session):
@@ -144,6 +144,6 @@ def delete_excursion(session, ex_id):
 
 if __name__ == '__main__':
     session, engine = database_init()
-    print(*get_all_windows(session), sep='\n')
+    print(*get_all_excursions(session), sep='\n')
 
-    print(get_admins_ids(session))
+

@@ -15,7 +15,6 @@ users_states = dict()
 
 @bot.message_handler(content_types=['text'])
 def work(message):
-    q = message.chat.id
     if message.text == '/start':
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         btn1 = types.KeyboardButton("❗Моё имя")
@@ -31,18 +30,17 @@ def work(message):
             markup.add(admbtn)
 
         text = 'Привет! 👋 Я - Клио! Я интерактивный помощник Исторического музея школы №13.'
-        bot.send_photo(q, open('menu.jpg', 'rb'), caption=text)
-        bot.send_message(q, 'Выберите одну из команд в меню: 👇', reply_markup=markup)
+        bot.send_photo(message.chat.id, open('menu.jpg', 'rb'), caption=text)
+        bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=markup)
 
-
-    elif (message.text == "❗Моё имя"):
+    elif message.text == "❗Моё имя":
         bot.send_message(message.chat.id, "Имя Клио я получил в честь музы истории в древнегреческой мифологии.")
 
-    elif (message.text == "🏛️О музее"):
+    elif message.text == "🏛️О музее":
         bot.send_message(message.chat.id,
                          "Исторический музей школы №13 создан в 2021 году. Номер свидетельства …… Музей имеет официальный статус и зарегистрирован на портале Школьных музеев. Наш музей совсем молодой, поэтому оживление памяти в формате интерактивных опросов, креативных обзоров и  увлекательных экскурсий - это про нас!")
 
-    elif (message.text == "🔥Наш актив"):
+    elif message.text == "🔥Наш актив":
         bot.send_message(message.chat.id,
                          "Наш музейный актив - увлеченные, заинтересованные ребята! Знакомьтесь! Бекетова Влада, Иващенко Лиза, Мосина Вика, Кондрашов Паша, Бессуднов Артём, Коцебук Настя, Синица Лера, Арсений - экскурсоводы и активисты музея.")
     elif message.text == "❓Как попасть на экскурсию в музей?":
@@ -52,15 +50,21 @@ def work(message):
         bot.send_message(message.chat.id,
                          "Записаться на экскурсию можно в кабинете 301 на третьем этаже или нажав на кнопку ниже. Мы всегда рады вас видеть и подберем удобное время!",
                          reply_markup=keyboard)
-    elif (message.text == "💻Панель администратора"):
+    elif message.text == "💻Панель администратора":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton("📝Расписание")
-        btn2 = types.KeyboardButton("🛢Время экскурсий")
+        btn1 = types.KeyboardButton("ℹ️Виды экскурсий")
+        btn2 = types.KeyboardButton("📝Расписание")
         markup.add(btn1, btn2)
-        btn3 = types.KeyboardButton("ℹ️Выставки")
-        btn4 = types.KeyboardButton("🥃Экскурсии")
-        markup.add(btn3, btn4)
         bot.send_message(message.chat.id, text='Привет Администратор!', reply_markup=markup)
+    elif message.text == "ℹ️Виды экскурсий":
+        keyboard = types.InlineKeyboardMarkup()
+        excursions = get_all_excursions(session)
+        for i, name in enumerate(excursions):
+            callback_button = types.InlineKeyboardButton(text=name, callback_data=f'excursion_admin.{i}')
+            keyboard.add(callback_button)
+        bot.send_message(message.chat.id, "На данный момент укзаны следующие экскурсии: 👇",
+                         reply_markup=keyboard)
+
     else:
         print(message.text)
         bot.send_message(message.chat.id, "Я Вас не понимаю. Попробуйте ещё раз.")
