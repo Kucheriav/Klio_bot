@@ -1,6 +1,6 @@
 import telebot
 from telebot import types # для указание типов
-from db_data.db_functions import *
+from db_functions import *
 from users_states import User
 
 

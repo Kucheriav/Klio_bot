@@ -1,5 +1,5 @@
-from db_data.db_models import *
-from db_data.db_config_reader import read_db_config
+from db_models import *
+from db_config_reader import read_db_config
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
