@@ -2,67 +2,76 @@ import telebot
 from telebot import types # для указание типов
 from db_functions import *
 from users_states import User
+from keyboard_markups import my_markups
+from db_config_reader import read_config
 
 
-
-API_TOKEN = "6428204535:AAHaYkp0ljreKLnOMQ7v1ib0WX7ZrawXu_o"
+API_TOKEN = read_config(filename='config.ini', section='api')['key']
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
-ADMINS_IDS = get_admins_ids(session)
+admins_dict = get_admins_ids_names_dict(session)
 users_states = dict()
 
 
 @bot.message_handler(content_types=['text'])
 def work(message):
-    if message.text == '/start':
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton("❗Моё имя")
-        btn2 = types.KeyboardButton("🏛️О музее")
-        markup.add(btn1, btn2)
-        btn3 = types.KeyboardButton("ℹ️Выставки")
-        btn4 = types.KeyboardButton("🔥Наш актив")
-        markup.add(btn3, btn4)
-        btn_zap = types.KeyboardButton('❓Как попасть на экскурсию в музей?')
-        markup.add(btn_zap)
-        if message.from_user.id in ADMINS_IDS:
-            admbtn = types.KeyboardButton("💻Панель администратора")
-            markup.add(admbtn)
+    if message.text == '/start' and message.from_user.id in admins_dict:
+        text = f'Привет, администратор {admins_dict[message.from_user.id]}! Клио приветствует тебя👋\nЧто-то нужно?'
+        bot.send_photo(message.chat.id, open('menu.jpg', 'rb'), caption=text)
+        bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=my_markups.get_admin_menu())
 
+    elif message.text == '/start':
         text = 'Привет! 👋 Я - Клио! Я интерактивный помощник Исторического музея школы №13.'
         bot.send_photo(message.chat.id, open('menu.jpg', 'rb'), caption=text)
-        bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=markup)
+        bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=my_markups.get_user_menu())
 
-    elif message.text == "❗Моё имя":
-        bot.send_message(message.chat.id, "Имя Клио я получил в честь музы истории в древнегреческой мифологии.")
+    elif message.text == my_markups.about_museum_btn.text:
+        text = ("Исторический музей школы №13 создан в 2021 году. Номер свидетельства …… "
+                "Музей имеет официальный статус и зарегистрирован на портале Школьных музеев. "
+                "Наш музей совсем молодой, поэтому оживление памяти в формате интерактивных опросов, "
+                "креативных обзоров и  увлекательных экскурсий - это про нас!")
+        bot.send_message(message.chat.id, text)
 
-    elif message.text == "🏛️О музее":
-        bot.send_message(message.chat.id,
-                         "Исторический музей школы №13 создан в 2021 году. Номер свидетельства …… Музей имеет официальный статус и зарегистрирован на портале Школьных музеев. Наш музей совсем молодой, поэтому оживление памяти в формате интерактивных опросов, креативных обзоров и  увлекательных экскурсий - это про нас!")
+    elif message.text == my_markups.about_bot_btn.text:
+        text = "Имя Клио я получил в честь музы истории в древнегреческой мифологии."
+        bot.send_message(message.chat.id, text)
 
-    elif message.text == "🔥Наш актив":
-        bot.send_message(message.chat.id,
-                         "Наш музейный актив - увлеченные, заинтересованные ребята! Знакомьтесь! Бекетова Влада, Иващенко Лиза, Мосина Вика, Кондрашов Паша, Бессуднов Артём, Коцебук Настя, Синица Лера, Арсений - экскурсоводы и активисты музея.")
-    elif message.text == "❓Как попасть на экскурсию в музей?":
+    elif message.text == my_markups.about_team_btn.text:
+        text = ("Наш музейный актив - увлеченные, заинтересованные ребята! Знакомьтесь! Бекетова Влада, "
+                "Иващенко Лиза, Мосина Вика, Кондрашов Паша, Бессуднов Артём, Коцебук Настя, Синица Лера, "
+                "Арсений - экскурсоводы и активисты музея.")
+        bot.send_message(message.chat.id, text)
+
+    elif message.text == my_markups.about_excursions_btn.text:
         keyboard = types.InlineKeyboardMarkup()
         callback_button = types.InlineKeyboardButton(text="📝Запись на экскурсию", callback_data='excursion_info')
         keyboard.add(callback_button)
-        bot.send_message(message.chat.id,
-                         "Записаться на экскурсию можно в кабинете 301 на третьем этаже или нажав на кнопку ниже. Мы всегда рады вас видеть и подберем удобное время!",
-                         reply_markup=keyboard)
-    elif message.text == "💻Панель администратора":
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn1 = types.KeyboardButton("ℹ️Виды экскурсий")
-        btn2 = types.KeyboardButton("📝Расписание")
-        markup.add(btn1, btn2)
-        bot.send_message(message.chat.id, text='Привет Администратор!', reply_markup=markup)
-    elif message.text == "ℹ️Виды экскурсий":
+        text = ("Записаться на экскурсию можно в кабинете 301 на третьем этаже или нажав на кнопку ниже. "
+                "Мы всегда рады вас видеть и подберем удобное время!")
+        bot.send_message(message.chat.id, text=text, reply_markup=keyboard)
+
+    elif message.text == my_markups.edit_excursion_btn.text:
         keyboard = types.InlineKeyboardMarkup()
         excursions = get_all_excursions(session)
-        for i, name in enumerate(excursions):
-            callback_button = types.InlineKeyboardButton(text=name, callback_data=f'excursion_admin.{i}')
+        for i, excursion in enumerate(excursions):
+            callback_button = types.InlineKeyboardButton(text=excursion[0], callback_data=f'excursion_admin.{i}')
             keyboard.add(callback_button)
-        bot.send_message(message.chat.id, "На данный момент укзаны следующие экскурсии: 👇",
+        bot.send_message(message.chat.id, "На данный момент указаны следующие экскурсии: 👇",
+                         reply_markup=keyboard)
+
+    elif message.text == my_markups.edit_timetable_btn.text:
+        keyboard = types.InlineKeyboardMarkup()
+        windows = get_all_current_windows(session)
+        for i, window in enumerate(windows):
+            text = window.title + ' ' + window.date_time.strftime('%d.%m.%Y')
+            if window.contact_link:
+                text = '✅' + text
+            else:
+                text = '☑️' + text
+            callback_button = types.InlineKeyboardButton(text=text, callback_data=f'timetable_admin.{i}')
+            keyboard.add(callback_button)
+        bot.send_message(message.chat.id, "На данный момент указано следующее расписание: 👇",
                          reply_markup=keyboard)
 
     else:
@@ -71,42 +80,44 @@ def work(message):
 
 
 @bot.callback_query_handler(func=lambda call: True)
-def callback_inline(call):
-    if call.message:
-        # по нажатию на "запись на экскурсию" вываливаем актуальные экскурсии
-        if call.data == 'excursion_info':
-            users_states[call.message.chat.id] = User()
-            windows_names = sorted(list(get_current_windows_names(session)))
-            users_states[call.message.chat.id].actual_excursions = windows_names[:]
-            keyboard = types.InlineKeyboardMarkup()
-            for i, name in enumerate(windows_names):
-                callback_button = types.InlineKeyboardButton(text=name, callback_data=f'excursion_choice.{i}')
-                keyboard.add(callback_button)
-            bot.send_message(call.message.chat.id, "На данный момент можно записаться на следующие экскурсии: 👇",
-                             reply_markup=keyboard)
-        # по нажатию на конкретную экскурсию вываливаем актуальные даты
-        elif call.data.startswith('excursion_choice'):
-            excursion_choice = users_states[call.message.chat.id].actual_excursions[int(call.data.split('.')[1])]
-            users_states[call.message.chat.id].excursion_choice = excursion_choice
-            dates = sorted(list(get_actual_dates_by_name(session, excursion_choice)))
-            users_states[call.message.chat.id].actual_dates = dates[:]
-            keyboard = types.InlineKeyboardMarkup()
-            for i, date in enumerate(dates):
-                callback_button = types.InlineKeyboardButton(text=date.strftime("%d.%m.%Y"), callback_data=f'date_choice.{i}')
-                keyboard.add(callback_button)
-            text = ''
-            text += excursion_choice + '\n'
-            text += get_description_by_title(session, excursion_choice)+ '\n'
-            text += "На данный момент можно записаться на следующие даты: 👇"
-            bot.send_message(call.message.chat.id, text,
-                             reply_markup=keyboard)
-        # по нажатию на конкретную дату продолжаем ветку через register_next_step_handler, уточняем детали
-        elif call.data.startswith('date_choice'):
-            date_choice = users_states[call.message.chat.id].actual_dates[int(call.data.split('.')[1])]
-            users_states[call.message.chat.id].date_choice = date_choice
-            text = 'Как вас записать? (укажите имя)'
-            bot.send_message(call.message.chat.id, text)
-            bot.register_next_step_handler(call.message, how_many)
+def user_choosing_excursion_window(call):
+    if call.data == 'excursion_info':
+        users_states[call.message.chat.id] = User()
+        windows_names = sorted(list(get_current_windows_names(session)))
+        users_states[call.message.chat.id].actual_excursions = windows_names[:]
+        keyboard = types.InlineKeyboardMarkup()
+        for i, name in enumerate(windows_names):
+            callback_button = types.InlineKeyboardButton(text=name, callback_data=f'excursion_choice.{i}')
+            keyboard.add(callback_button)
+        bot.edit_message_text("На данный момент можно записаться на следующие экскурсии: 👇",
+                              call.message.chat.id, call.message.id, reply_markup=keyboard)
+    # по нажатию на конкретную экскурсию вываливаем актуальные даты
+    elif call.data.startswith('excursion_choice'):
+        excursion_choice = users_states[call.message.chat.id].actual_excursions[int(call.data.split('.')[1])]
+        users_states[call.message.chat.id].excursion_choice = excursion_choice
+        dates = sorted([x.strftime("%d.%m.%Y") for x in get_actual_dates_by_name(session, excursion_choice)])
+        users_states[call.message.chat.id].actual_dates = dates[:]
+        keyboard = types.InlineKeyboardMarkup()
+        for i, date in enumerate(dates):
+            callback_button = types.InlineKeyboardButton(text=date,
+                                                         callback_data=f'date_choice.{i}')
+            keyboard.add(callback_button)
+        callback_button = types.InlineKeyboardButton(text='Вернуться к выбору экскурсии',
+                                                     callback_data='excursion_info')
+        keyboard.add(callback_button)
+        text = ''
+        text += excursion_choice + '\n'
+        text += get_description_by_title(session, excursion_choice)+ '\n'
+        text += "На данный момент можно записаться на следующие даты: 👇"
+        bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=keyboard)
+
+    # по нажатию на конкретную дату продолжаем ветку через register_next_step_handler, уточняем детали
+    elif call.data.startswith('date_choice'):
+        date_choice = users_states[call.message.chat.id].actual_dates[int(call.data.split('.')[1])]
+        users_states[call.message.chat.id].date_choice = date_choice
+        text = 'Как вас записать? (укажите имя)'
+        bot.send_message(call.message.chat.id, text)
+        bot.register_next_step_handler(call.message, how_many)
 
 
 
@@ -125,10 +136,16 @@ def confirm(message):
     window_id = window_id_by_title_and_date(session, users_states[message.chat.id].excursion_choice,
                                             users_states[message.chat.id].date_choice)
     # ожидаемые аргументы: сессия и [window_id, contact_link, contact_name,  number]
-    result = add_visit(session, [window_id, users_states[message.chat.id].contact_link,
-                                 users_states[message.chat.id].contact_name, number])
-
-    bot.send_message(message.chat.id, text=result)
+    result = add_visit_into_window(session, [window_id, users_states[message.chat.id].contact_link,
+                                             users_states[message.chat.id].contact_name, number])
+    if result == 'ok':
+        text = (f'🎉Поздравляю! Вы, {users_states[message.chat.id].contact_name}, успешно записаны '
+                f'на {users_states[message.chat.id].date_choice} '
+                f'на экскурсию {users_states[message.chat.id].excursion_choice}.\n'
+                f'Моя команда свяжется с вами в ближайшее время')
+    else:
+        text = '❌Возникла ошибка! Попробуйте заново или обратитесь к администратору '
+    bot.send_message(message.chat.id, text=text)
 
 
 bot.infinity_polling()

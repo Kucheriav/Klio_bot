@@ -1,7 +1,7 @@
 from db_functions import *
 
 
-def add_test_data_classes(session):
+def add_test_data(session):
     with open('test_data.txt', encoding='utf8') as file:
         new_excursions, open_visits = file.read().split('-#-')
         new_excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in new_excursions.split('@')]
@@ -42,22 +42,26 @@ def straight_choosing_scenario():
     print(f'Выбрано: {date_time}')
     this_id = window_id_by_title_and_date(session, title, date_time)
     print('this_id', this_id)
-    res = add_visit(session, singing_to_visit())
+    res = add_visit_into_window(session, singing_to_visit())
     print(res)
     bb = get_all_windows(session)
     print(*bb, sep='\n')
 
 def drop_db_scenario():
     session, engine = recreate_db()
-    add_test_data_classes(session)
+    add_test_data(session)
     add_test_admin_users(session)
+    print(*get_all_users(session))
+
 
 def normal_init():
     session, engine = database_init()
     print(*get_all_windows(session), sep='\n')
+    print(*get_all_users(session))
 
 if __name__ == '__main__':
-    drop_db_scenario()
+    normal_init()
+
 
 
 
