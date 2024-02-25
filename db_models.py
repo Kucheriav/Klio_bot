@@ -46,26 +46,6 @@ class User(Base):
         return f'''{self.name}  {self.link}  {self.tg_id}  {self.is_admin}'''
 
 
-# def add_window(excursion_id=1, date_time=datetime(year=2024, month=1, day=30, hour=12, minute=30)):
-#     with sessionmaker(bind=engine)() as session:
-#         window = Schedule(
-#             excursion_id=excursion_id,
-#             date_time=date_time,
-#         )
-#         session.add(window)
-#         session.commit()
-#
-#
-#
-#
-# def cross_table_query_visits():
-#     with sessionmaker(bind=engine)() as session:
-#         data = session.query(Schedule, Excursion.title).join(Excursion).all()
-#         # возвращется список списков [[объект Visit, Excursion.title], [] ....]
-#         for el in data:
-#             print(el[0].id, el[1], el[0].date_time, el[0].link, el[0].visitors)
-
-
 
 
 

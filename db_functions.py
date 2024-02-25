@@ -35,7 +35,7 @@ def recreate_db():
 ### общие функции
 def get_all_excursions(session):
     data = session.query(Excursion).all()
-    return [(x.title, x.description, x.duration) for x in data]
+    return data
 
 
 def get_all_windows(session):
@@ -60,24 +60,35 @@ def get_this_window(session, this_id) -> Schedule:
 
 ### пользовательские функции
 ## начало ветки записи на посещение
-def get_current_windows_names(session):
-    data = (session.query(Excursion.title).join(Schedule).
+def get_current_excursions_ids_and_names(session):
+    current_excursions_ids_and_names = (session.query(Excursion.id, Excursion.title).join(Schedule).
             filter(Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all())
-    data = set([x[0] for x in data])
-    return data
+    return set(current_excursions_ids_and_names)
 
 
+#not used with next function
 def get_description_by_title(session, title):
-    data = session.query(Excursion.description).filter(Excursion.title == title).one()[0]
-    return data
+    description = session.query(Excursion.description).filter(Excursion.title == title).one()[0]
+    return description
 
 
+def get_excursion_info_by_id(session, id):
+    excursion_info = session.query(Excursion.title, Excursion.description, Excursion.duration).filter(Excursion.id == id).one()
+    return excursion_info
+
+
+#not used with next function
 def get_actual_dates_by_name(session, title):
     dates = session.query(Schedule.date_time).join(Excursion).filter(Excursion.title == title,
-                                                                     Schedule.date_time >= datetime.now()).all()
+                                            Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all()
     dates = [x[0] for x in dates]
     return dates
 
+
+def get_windows_ids_and_dates_by_excursion_id(session, id):
+    windows_ids_and_dates = session.query(Schedule.id, Schedule.date_time).join(Excursion).filter(Excursion.id == id,
+                                            Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all()
+    return windows_ids_and_dates
 
 def window_id_by_title_and_date(session, title, date):
     date = datetime.strptime(date, '%d.%m.%Y')
@@ -86,7 +97,7 @@ def window_id_by_title_and_date(session, title, date):
     return window_id[0][0]
 
 
-def add_visit_into_window(session, visit_info):
+def add_visit_into_window(session, visit_info) -> Schedule:
     #visit_info = [window_id, contact_link, contact_name,  number]
     this_visit = get_this_window(session, visit_info[0])
     this_visit.contact_link = 'https://t.me/' + visit_info[1]
@@ -98,7 +109,7 @@ def add_visit_into_window(session, visit_info):
     except Exception:
         return False
     else:
-        return 'ok'
+        return this_visit
 ##конец ветки записи на посещение
 
 
@@ -111,10 +122,14 @@ def get_unempty_current_windows(session):
 
 
 def get_all_current_windows(session):
-    data = session.query(Excursion.title, Schedule.date_time, Schedule.contact_name, Schedule.contact_link,
-                         Schedule.visitors).join(Excursion).filter(Schedule.date_time >= datetime.now()).all()
+    data = (session.query(Schedule.id, Excursion.title, Schedule.date_time, Schedule.contact_link).
+            join(Excursion).filter(Schedule.date_time >= datetime.now()).all())
     return data
 
+def get_all_excursion_info_by_id(session, id):
+    data = session.query(Excursion.title, Excursion.description, Excursion.duration, Schedule.date_time, Schedule.contact_name, Schedule.contact_link,
+                         Schedule.visitors).join(Excursion).filter(Schedule.date_time >= datetime.now(), Excursion.id == id).all()
+    return data
 
 def add_window(session, title, date_time):
     excursion_id = session.query(Excursion.id).filter(Excursion.title == title).one()
@@ -138,6 +153,7 @@ def delete_window(session, window_id):
     window = session.query(Schedule).filter_by(id=window_id).one()
     session.delete(window)
     session.commit()
+
 
 
 def add_excursion(session,title, description, duration):

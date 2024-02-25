@@ -1,8 +1,12 @@
-class User:
-    def __init__(self):
+class UserCache:
+    def __init__(self, date):
+        self.date = date
         self.contact_name = ''
         self.contact_link = ''
-        self.excursion_choice = ''
         self.date_choice = ''
-        self.actual_excursions = list() #[title1, title2, ... ]
-        self.actual_dates = list() #[date1, date2, ... ]
+        self.window_id = ''
+
+
+
+
+

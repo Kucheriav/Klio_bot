@@ -32,7 +32,7 @@ def singing_to_visit():
 
 def straight_choosing_scenario():
     session, engine = database_init()
-    r = get_current_windows_names(session)
+    r = get_current_excursions_ids_and_names(session)
     print(*r, sep='\n')
     title = 'Фронтовая посуда'
     print(f'Выбрано: {title}')
@@ -56,8 +56,8 @@ def drop_db_scenario():
 
 def normal_init():
     session, engine = database_init()
-    print(*get_all_windows(session), sep='\n')
-    print(*get_all_users(session))
+    print(get_windows_ids_and_dates_by_excursion_id(session, 1))
+
 
 if __name__ == '__main__':
     normal_init()
