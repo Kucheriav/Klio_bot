@@ -1,5 +1,5 @@
 import telebot
-from telebot import types # для указание типов
+from telebot import types
 from typing import Dict
 from db_functions import *
 from users_states import UserCache
@@ -13,6 +13,7 @@ bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
 admins_dict = get_admins_ids_names_dict(session)
 users_cache_dict: Dict[int, UserCache] = {}
+menu_buttons_text = my_markups.get_buttons_text()
 
 
 @bot.message_handler(content_types=['text'])
@@ -124,6 +125,10 @@ def user_choosing_excursion_window(call):
 
 @bot.message_handler(content_types=['text'])
 def how_many(message):
+    if message.text in menu_buttons_text:
+        text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
+        bot.send_message(message.chat.id, text)
+        return work(message)
     users_cache_dict[message.chat.id].contact_name = message.text
     users_cache_dict[message.chat.id].contact_link = message.from_user.username
     text = "Сколько вас?"
@@ -133,6 +138,10 @@ def how_many(message):
 
 @bot.message_handler(content_types=['text'])
 def confirm(message):
+    if message.text in menu_buttons_text:
+        text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
+        bot.send_message(message.chat.id, text)
+        return work(message)
     info = [users_cache_dict[message.chat.id].window_id, users_cache_dict[message.chat.id].contact_link,
             users_cache_dict[message.chat.id].contact_name, message.text]
     # ожидаемые аргументы: сессия и [window_id, contact_link, contact_name, umber]
@@ -198,11 +207,33 @@ def edit_excursion(call):
         keyboard.add(edit_excursion_btn, del_excursion_btn, add_window_btn)
         bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=keyboard)
     elif topic == 'edit_excursion_title':
-        print(1)
+        text = 'Введите новое название:'
+        bot.send_message(call.message.chat.id, text=text)
+        bot.register_next_step_handler(call.message, confirm, 'title', excursion_id)
     elif topic == 'edit_excursion_description':
-        print(2)
+        text = 'Введите новое описание:'
+        bot.send_message(call.message.chat.id, text=text)
+        bot.register_next_step_handler(call.message, confirm, 'description', excursion_id)
     elif topic == 'edit_excursion_duration':
-        print(3)
+        text = 'Введите новую длительность в минутах (только число):'
+        bot.send_message(call.message.chat.id, text=text)
+        bot.register_next_step_handler(call.message, confirm, 'duration', excursion_id)
+
+@bot.message_handler(content_types=['text'])
+def finish_excursion_editing(message, attribute_type, excursion_id):
+    if attribute_type == 'title':
+        pass
+    elif attribute_type == 'description':
+        pass
+    elif attribute_type == 'duration':
+        pass
+    else:
+        pass
+
+
+@bot.callback_query_handler(func=lambda call: 'del_excursion' in call.data)
+def edit_excursion(call):
+    pass
 
 
 bot.infinity_polling()

@@ -20,5 +20,12 @@ class MyMarkupsFabric:
         admin_markup.add(self.edit_timetable_btn)
         return admin_markup
 
+    def get_buttons_text(self):
+        res = []
+        for attr in dir(MyMarkupsFabric):
+            if '_btn' in attr:
+                res.append(getattr(MyMarkupsFabric, attr).text)
+        return res
+
 
 my_markups = MyMarkupsFabric()
