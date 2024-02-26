@@ -3,6 +3,7 @@ from db_config_reader import read_config
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.sql import func
 import errors
 from datetime import datetime
 
@@ -100,6 +101,8 @@ def window_id_by_title_and_date(session, title, date):
 def add_visit_into_window(session, visit_info) -> Schedule:
     #visit_info = [window_id, contact_link, contact_name,  number]
     this_visit = get_this_window(session, visit_info[0])
+    if this_visit.contact_link:
+        return False
     this_visit.contact_link = 'https://t.me/' + visit_info[1]
     this_visit.contact_name = visit_info[2]
     this_visit.visitors = visit_info[3]
@@ -126,10 +129,26 @@ def get_all_current_windows(session):
             join(Excursion).filter(Schedule.date_time >= datetime.now()).all())
     return data
 
+# злая тема, но нужна ли она?
 def get_all_excursion_info_by_id(session, id):
-    data = session.query(Excursion.title, Excursion.description, Excursion.duration, Schedule.date_time, Schedule.contact_name, Schedule.contact_link,
-                         Schedule.visitors).join(Excursion).filter(Schedule.date_time >= datetime.now(), Excursion.id == id).all()
-    return data
+    delimiter = '-#-'
+    data = session.query(Excursion.title, Excursion.description, Excursion.duration,
+                         func.group_concat(Schedule.date_time, delimiter).label('date_times'),
+                         func.group_concat(Schedule.contact_name, delimiter).label('contact_names'),
+                         func.group_concat(Schedule.contact_link, delimiter).label('contact_links'),
+                         func.group_concat(Schedule.visitors, delimiter).label('visitors')) \
+                 .join(Schedule, Excursion.id == Schedule.excursion_id) \
+                 .filter(Excursion.id == id) \
+                 .group_by(Excursion.title, Excursion.description, Excursion.duration) \
+                 .one()
+    # типовая группировка для -#- разделителя '2024-05-26 00:00:00-#-,2024-05-24 00:00:00-#-'
+    # внутри добавляется запятая на автомате, разделитель доваляется еще и в конец
+    # чистим:
+    temp = list(data[3:])
+    for i in range(len(temp)):
+        temp[i] = temp[i][:-len(delimiter)].split(delimiter + ',')
+    return list(data[:3]) + temp
+
 
 def add_window(session, title, date_time):
     excursion_id = session.query(Excursion.id).filter(Excursion.title == title).one()

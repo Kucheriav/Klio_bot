@@ -56,11 +56,11 @@ def drop_db_scenario():
 
 def normal_init():
     session, engine = database_init()
-    print(get_windows_ids_and_dates_by_excursion_id(session, 1))
+    print(get_all_excursion_info_by_id(session, 1))
 
 
 if __name__ == '__main__':
-    normal_init()
+    drop_db_scenario()
 
 
 
