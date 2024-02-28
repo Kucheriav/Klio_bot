@@ -4,7 +4,7 @@ from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
-import errors
+from errors import *
 from datetime import datetime
 
 
@@ -31,6 +31,16 @@ def recreate_db():
     drop_database(engine.url)
     session, engine = database_init()
     return session, engine
+
+def check_date(date):
+    try:
+        d = datetime.strptime(date, '%d.%m.%Y')
+    except ValueError as ex:
+        return 'Некорректный формат даты! Пример верного: 05.05.2055'
+    if d < datetime.now():
+        return 'Этот день уже прошел'
+    return 'ok'
+
 
 
 ### общие функции
@@ -150,22 +160,38 @@ def get_all_excursion_info_by_id(session, id):
     return list(data[:3]) + temp
 
 
-def add_window(session, title, date_time):
-    excursion_id = session.query(Excursion.id).filter(Excursion.title == title).one()
+def update_excursion_by_id(session, id, field_name, new_value):
+    excursion = session.query(Excursion).filter_by(id=id).first()
+    if excursion:
+        setattr(excursion, field_name, new_value)
+        session.commit()
+        return True
+    else:
+        return False
+
+
+def del_excursion(session, excursion_id):
+    try:
+        session.query(Excursion).filter_by(id=excursion_id).delete()
+        session.commit()
+    except Exception:
+        return False
+    else:
+        return True
+
+
+def add_window(session, excursion_id, date_time):
     try:
         date_time = datetime.strptime(date_time, '%d.%m.%Y')
-    except Exception:
-        raise errors.DateInputError
-    else:
         session.add(Schedule(
             excursion_id=excursion_id,
             date_time=date_time
         ))
         session.commit()
-
-
-def update_window(session):
-    pass
+    except Exception:
+        return False
+    else:
+        return True
 
 
 def delete_window(session, window_id):

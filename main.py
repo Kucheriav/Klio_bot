@@ -59,6 +59,8 @@ def work(message):
         for i, excursion in enumerate(excursions):
             callback_button = types.InlineKeyboardButton(text=excursion.title, callback_data=f'excursion_admin.{excursion.id}')
             keyboard.add(callback_button)
+        callback_button = types.InlineKeyboardButton(text='Добавить новый вид экскурсии', callback_data=f'excursion_admin.add')
+        keyboard.add(callback_button)
         bot.send_message(message.chat.id, "На данный момент указаны следующие экскурсии: 👇",
                          reply_markup=keyboard)
 
@@ -133,11 +135,11 @@ def how_many(message):
     users_cache_dict[message.chat.id].contact_link = message.from_user.username
     text = "Сколько вас?"
     bot.send_message(message.chat.id, text)
-    bot.register_next_step_handler(message, confirm)
+    bot.register_next_step_handler(message, confirm_new_visit)
 
 
 @bot.message_handler(content_types=['text'])
-def confirm(message):
+def confirm_new_visit(message):
     if message.text in menu_buttons_text:
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
@@ -159,6 +161,11 @@ def confirm(message):
 @bot.callback_query_handler(func=lambda call: 'admin' in call.data)
 def admin_functions_entry(call):
     if 'excursion_admin' in call.data:
+        if 'add' in call.data:
+            text = 'Введите название новой экскурсии'
+            bot.send_message(call.message.chat.id, text)
+            bot.register_next_step_handler(call.message, new_excursion_ask_description)
+            return
         excursion_id = int(call.data.split('.')[1])
         excursion_info_list = get_excursion_info_by_id(session, excursion_id)
         text = f'Экскурсия: {excursion_info_list[0]}.\n'
@@ -190,11 +197,25 @@ def admin_functions_entry(call):
         #     del_window_btn = types.InlineKeyboardButton(text='Удалить окно',
         #                                                 callback_data=f'del_window.{excursion_id}')
 
+@bot.message_handler(content_types=['text'])
+def new_excursion_ask_description(message):
+    if message.text in menu_buttons_text:
+        text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
+        bot.send_message(message.chat.id, text)
+        return work(message)
+    temp = [message.text]
+    text = 'Введите описание'
+    bot.send_message(message.chat.id, text)
+    bot.register_next_step_handler(message, new_excursion_ask_description)
+
+@bot.message_handler(content_types=['text'])
+def new_excursion_ask_duration(message):
+
+
 @bot.callback_query_handler(func=lambda call: 'edit_excursion' in call.data)
 def edit_excursion(call):
     topic, excursion_id = call.data.split('.')
     excursion_id = int(excursion_id)
-    print(call.data)
     if topic == 'edit_excursion':
         text = 'Что вы хотите поменять?'
         keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -209,31 +230,69 @@ def edit_excursion(call):
     elif topic == 'edit_excursion_title':
         text = 'Введите новое название:'
         bot.send_message(call.message.chat.id, text=text)
-        bot.register_next_step_handler(call.message, confirm, 'title', excursion_id)
+        bot.register_next_step_handler(call.message, finish_excursion_editing, 'title', excursion_id)
     elif topic == 'edit_excursion_description':
         text = 'Введите новое описание:'
         bot.send_message(call.message.chat.id, text=text)
-        bot.register_next_step_handler(call.message, confirm, 'description', excursion_id)
+        bot.register_next_step_handler(call.message, finish_excursion_editing, 'description', excursion_id)
     elif topic == 'edit_excursion_duration':
         text = 'Введите новую длительность в минутах (только число):'
         bot.send_message(call.message.chat.id, text=text)
-        bot.register_next_step_handler(call.message, confirm, 'duration', excursion_id)
+        bot.register_next_step_handler(call.message, finish_excursion_editing, 'duration', excursion_id)
+
 
 @bot.message_handler(content_types=['text'])
 def finish_excursion_editing(message, attribute_type, excursion_id):
-    if attribute_type == 'title':
-        pass
-    elif attribute_type == 'description':
-        pass
-    elif attribute_type == 'duration':
-        pass
+    if message.text in menu_buttons_text:
+        text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
+        bot.send_message(message.chat.id, text)
+        return work(message)
+    res = update_excursion_by_id(session, excursion_id, attribute_type, message)
+    if res:
+        bot.send_message(message.chat.id, text='Значение обновлено')
     else:
-        pass
+        bot.send_message(message.chat.id, text='Ошибка')
 
 
 @bot.callback_query_handler(func=lambda call: 'del_excursion' in call.data)
-def edit_excursion(call):
-    pass
+def del_excursion_question(call):
+    excursion_id = call.data.split('.')[1]
+    keyboard = types.InlineKeyboardMarkup()
+    yes_btn = types.InlineKeyboardButton(text='Да', callback_data=f'yes_del.{excursion_id}')
+    no_btn = types.InlineKeyboardButton(text='Нет', callback_data=f'no_del.{excursion_id}')
+    keyboard.add(yes_btn, no_btn)
+    bot.send_message(call.message.chat.id, 'Вы уверены?', reply_markup=keyboard)
+
+
+@bot.callback_query_handler(func=lambda call: 'yes_del' in call.data or 'no_del' in call.data)
+def confirm_del_excursion(call):
+    if 'yes' in call.data:
+        excursion_id = call.data.split('.')[1]
+        res = del_excursion(session, excursion_id)
+        if res:
+            bot.send_message(call.message.chat.id, 'Экскурсия удалена')
+        else:
+            bot.send_message(call.message.chat.id, 'Возникла ошибка')
+    else:
+        bot.send_message(call.message.chat.id, 'Удаление отменено')
+
+
+@bot.callback_query_handler(func=lambda call: 'add_window' in call.data)
+def adding_new_window_question(call):
+    excursion_id = call.data.split('.')[1]
+    bot.send_message(call.message.chat.id, 'Введите дату в формате дд.мм.гггг')
+    bot.register_next_step_handler(call.message, adding_new_window_final, excursion_id)
+
+@bot.message_handler(content_types=['text'])
+def adding_new_window_final(message, excursion_id):
+    if (t := check_date(message.text)) != 'ok':
+        bot.send_message(message.chat.id, t)
+        return
+    res = add_window(session, excursion_id, message.text)
+    if res:
+        bot.send_message(message.chat.id, 'Успешно добавлено новое "окошко"!')
+    else:
+        bot.send_message(message.chat.id, 'Возникла ошибка!')
 
 
 bot.infinity_polling()
