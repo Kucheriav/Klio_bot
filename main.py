@@ -128,7 +128,6 @@ def user_choosing_excursion_window(call):
         bot.register_next_step_handler(call.message, how_many)
 
 
-
 @bot.message_handler(content_types=['text'])
 def how_many(message):
     if message.text in menu_buttons_text:
@@ -185,14 +184,18 @@ def admin_functions_entry(call):
         keyboard.add(edit_excursion_btn, del_excursion_btn, add_window_btn)
         bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=keyboard)
     elif 'window_admin' in call.data:
-        pass
-        # text = f'Экскурсия'
-        # text += 'Описание'
-        # text += 'Длительность'
-        # if 'кто-то уже записался':
-        #     text += 'Дата'
-        #     text += 'Ссылка'
-        #     text += 'Как зовут сколько их'
+        window_id = int(call.data.split('.')[1])
+        # -> [title, description, duration, date_time, contact_link, contact_name, visitors]
+        window_info = get_window_info_by_id(session, window_id)
+        text = f'{window_info[0]}\n'
+        text += f'Описание. {window_info[1]}\n'
+        text += f'Длительность {window_info[2]} мин.\n'
+        text += f'{window_info[3].strftime("%d.%m.%Y")}\n'
+        if window_info[4]:
+            text += f'Ссылка: {window_info[4]}\n'
+            text += f'{window_info[5]}\n'
+            text += f'Количество {window_info[6]}\n'
+        bot.send_message(call.message.chat.id, text=text)
         #     back_btn = types.InlineKeyboardButton(text='К списку экскурсий', callback_data=f'back')
         # else:
         #     window_id = call.data.split('.')[1]

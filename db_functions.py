@@ -49,12 +49,12 @@ def get_all_excursions(session):
     return data
 
 
-def get_all_windows(session):
+def get_all_windows(session): # used in tests only
     data = session.query(Schedule).all()
     return data
 
 
-def get_all_users(session):
+def get_all_users(session): # used in tests only
     data = session.query(User).all()
     return data
 
@@ -77,19 +77,12 @@ def get_current_excursions_ids_and_names(session):
     return set(current_excursions_ids_and_names)
 
 
-#not used with next function
-def get_description_by_title(session, title):
-    description = session.query(Excursion.description).filter(Excursion.title == title).one()[0]
-    return description
-
-
 def get_excursion_info_by_id(session, id):
     excursion_info = session.query(Excursion.title, Excursion.description, Excursion.duration).filter(Excursion.id == id).one()
     return excursion_info
 
 
-#not used with next function
-def get_actual_dates_by_name(session, title):
+def get_actual_dates_by_name(session, title): # used in tests only
     dates = session.query(Schedule.date_time).join(Excursion).filter(Excursion.title == title,
                                             Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all()
     dates = [x[0] for x in dates]
@@ -101,7 +94,7 @@ def get_windows_ids_and_dates_by_excursion_id(session, id):
                                             Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all()
     return windows_ids_and_dates
 
-def window_id_by_title_and_date(session, title, date):
+def window_id_by_title_and_date(session, title, date): # used in tests only
     date = datetime.strptime(date, '%d.%m.%Y')
     window_id = session.query(Schedule.id).join(Excursion).filter(Excursion.title == title,
                                                                   Schedule.date_time == date).all()
@@ -127,13 +120,6 @@ def add_visit_into_window(session, visit_info) -> Schedule:
 
 
 ####admin functions
-def get_unempty_current_windows(session):
-    data = session.query(Excursion.title, Schedule.date_time, Schedule.contact_name, Schedule.contact_link,
-                         Schedule.visitors).join(Excursion).filter(Schedule.contact_link != '',
-                                                                   Schedule.date_time >= datetime.now()).all()
-    return data
-
-
 def get_all_current_windows(session):
     data = (session.query(Schedule.id, Excursion.title, Schedule.date_time, Schedule.contact_link).
             join(Excursion).filter(Schedule.date_time >= datetime.now()).all())
@@ -189,6 +175,14 @@ def del_excursion(session, excursion_id):
         return False
     else:
         return True
+
+
+def get_window_info_by_id(session, window_id):
+    window_info = (session.query(Excursion.title, Excursion.description, Excursion.duration,
+                            Schedule.date_time, Schedule.contact_link, Schedule.contact_name, Schedule.visitors).
+              join(Schedule, Excursion.id == Schedule.excursion_id).
+              filter(Schedule.id == window_id).one())
+    return window_info
 
 
 def add_window(session, excursion_id, date_time):
