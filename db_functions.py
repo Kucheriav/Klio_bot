@@ -160,6 +160,16 @@ def get_all_excursion_info_by_id(session, id):
     return list(data[:3]) + temp
 
 
+def add_excursion(session, data):
+    try:
+        session.add(Excursion(title=data[0], description=data[2], duration=data[1]))
+        session.commit()
+    except Exception:
+        return False
+    else:
+        return True
+
+
 def update_excursion_by_id(session, id, field_name, new_value):
     excursion = session.query(Excursion).filter_by(id=id).first()
     if excursion:
@@ -174,7 +184,8 @@ def del_excursion(session, excursion_id):
     try:
         session.query(Excursion).filter_by(id=excursion_id).delete()
         session.commit()
-    except Exception:
+    except Exception as ex:
+        print(ex.args[0])
         return False
     else:
         return True
@@ -197,26 +208,6 @@ def add_window(session, excursion_id, date_time):
 def delete_window(session, window_id):
     window = session.query(Schedule).filter_by(id=window_id).one()
     session.delete(window)
-    session.commit()
-
-
-
-def add_excursion(session,title, description, duration):
-    session.add(Excursion(
-        title=title,
-        description=description,
-        duration=duration
-    ))
-    session.commit()
-
-
-def update_excursion(session):
-    pass
-
-
-def delete_excursion(session, ex_id):
-    excursion = session.query(Excursion).filter_by(id=ex_id).one()
-    session.delete(excursion)
     session.commit()
 
 

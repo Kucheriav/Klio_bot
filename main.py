@@ -1,6 +1,7 @@
 import telebot
 from telebot import types
 from typing import Dict
+
 from db_functions import *
 from users_states import UserCache
 from keyboard_markups import my_markups
@@ -68,7 +69,10 @@ def work(message):
         keyboard = types.InlineKeyboardMarkup()
         windows = get_all_current_windows(session)
         for i, window in enumerate(windows):
-            text = window.title + ' ' + window.date_time.strftime('%d.%m.%Y')
+            if len(window.title) > 40:
+                text = window.title[:40] + '... ' + window.date_time.strftime('%d.%m.%Y')
+            else:
+                text = window.title + ' ' + window.date_time.strftime('%d.%m.%Y')
             if window.contact_link:
                 text = '✅' + text
             else:
@@ -206,10 +210,31 @@ def new_excursion_ask_description(message):
     temp = [message.text]
     text = 'Введите описание'
     bot.send_message(message.chat.id, text)
-    bot.register_next_step_handler(message, new_excursion_ask_description)
+    bot.register_next_step_handler(message, new_excursion_ask_duration, temp)
 
 @bot.message_handler(content_types=['text'])
-def new_excursion_ask_duration(message):
+def new_excursion_ask_duration(message, temp):
+    if message.text in menu_buttons_text:
+        text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
+        bot.send_message(message.chat.id, text)
+        return work(message)
+    temp.append(message.text)
+    text = 'Введите длительность (только число)'
+    bot.send_message(message.chat.id, text)
+    bot.register_next_step_handler(message, new_excursion_final, temp)
+
+@bot.message_handler(content_types=['text'])
+def new_excursion_final(message, temp):
+    if message.text in menu_buttons_text:
+        text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
+        bot.send_message(message.chat.id, text)
+        return work(message)
+    temp.append(message.text)
+    res = add_excursion(session, temp)
+    if res:
+        bot.send_message(message.chat.id, 'Успешно добавлено')
+    else:
+        bot.send_message(message.chat.id, 'Произошла ошибка')
 
 
 @bot.callback_query_handler(func=lambda call: 'edit_excursion' in call.data)

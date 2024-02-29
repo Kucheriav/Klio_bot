@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey, UniqueConstraint, DefaultClause
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 
 class Base(DeclarativeBase):
@@ -15,6 +15,8 @@ class Excursion(Base):
     duration = Column(String(60))
     UniqueConstraint('title')
 
+    schedules = relationship('Schedule', cascade='all, delete')
+
     def __str__(self):
         return f'''{self.title}\n{self.description}\n{self.duration}'''
 
@@ -29,6 +31,7 @@ class Schedule(Base):
     contact_name = Column(String(300), DefaultClause(''))
     visitors = Column(String(100), DefaultClause('0'))
     UniqueConstraint('excursion_id', 'date_time')
+
 
     def __str__(self):
         return f'''{self.excursion_id}  {self.date_time}  {self.contact_link}  {self.contact_name}  {self.visitors}'''
