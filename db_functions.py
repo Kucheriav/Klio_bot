@@ -199,6 +199,16 @@ def add_window(session, excursion_id, date_time):
         return True
 
 
+def update_window_by_id(session, id, field_name, new_value):
+    window = session.query(Schedule).filter_by(id=id).first()
+    if window:
+        setattr(window, field_name, new_value)
+        session.commit()
+        return True
+    else:
+        return False
+
+
 def delete_window(session, window_id):
     window = session.query(Schedule).filter_by(id=window_id).one()
     session.delete(window)
