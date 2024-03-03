@@ -34,9 +34,9 @@ def recreate_db():
 
 def check_date(date):
     try:
-        d = datetime.strptime(date, '%d.%m.%Y')
+        d = datetime.strptime(date, '%d.%m.%Y %H:%M')
     except ValueError as ex:
-        return 'Некорректный формат даты! Пример верного: 05.05.2055'
+        return 'Некорректный формат даты! Пример верного: 05.05.2055 12:23'
     if d < datetime.now():
         return 'Этот день уже прошел'
     return 'ok'
@@ -95,7 +95,7 @@ def get_windows_ids_and_dates_by_excursion_id(session, id):
     return windows_ids_and_dates
 
 def window_id_by_title_and_date(session, title, date): # used in tests only
-    date = datetime.strptime(date, '%d.%m.%Y')
+    date = datetime.strptime(date, '%d.%m.%Y %H:%M')
     window_id = session.query(Schedule.id).join(Excursion).filter(Excursion.title == title,
                                                                   Schedule.date_time == date).all()
     return window_id[0][0]
@@ -187,7 +187,7 @@ def get_window_info_by_id(session, window_id):
 
 def add_window(session, excursion_id, date_time):
     try:
-        date_time = datetime.strptime(date_time, '%d.%m.%Y')
+        date_time = datetime.strptime(date_time, '%d.%m.%Y %H:%M')
         session.add(Schedule(
             excursion_id=excursion_id,
             date_time=date_time
@@ -213,6 +213,11 @@ def delete_window(session, window_id):
     window = session.query(Schedule).filter_by(id=window_id).one()
     session.delete(window)
     session.commit()
+
+
+def get_admin_id_by_name(session, name):
+    tg_id = session.query(User.tg_id).filter(User.name==name).one()
+    return tg_id
 
 
 if __name__ == '__main__':

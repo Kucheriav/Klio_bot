@@ -6,11 +6,11 @@ def add_test_data(session):
         new_excursions, open_visits = file.read().split('-#-')
         new_excursions = [list(filter(lambda x: len(x), exc.split('\n'))) for exc in new_excursions.split('@')]
         new_excursions = [list(map(lambda x: x.split(': ')[1], exc)) for exc in new_excursions]
-        open_visits = list(map(lambda x: x.split(), open_visits.split('-')))
+        open_visits = list(map(lambda x: x.strip().split('\n'), open_visits.split('-')))
     for excursion in new_excursions:
         session.add(Excursion(title=excursion[0], description=excursion[2], duration=excursion[1].split()[0]))
     for visit in open_visits:
-        session.add(Schedule(excursion_id=int(visit[0]), date_time=datetime.strptime(visit[1], '%d.%m.%Y')))
+        session.add(Schedule(excursion_id=int(visit[0]), date_time=datetime.strptime(visit[1], '%d.%m.%Y %H:%M')))
 
     session.commit()
 
@@ -37,8 +37,8 @@ def straight_choosing_scenario():
     title = 'Фронтовая посуда'
     print(f'Выбрано: {title}')
     s = get_actual_dates_by_name(session, title)
-    print(*map(lambda x: x.strftime("%d.%m.%Y"), s), sep='\n')
-    date_time = datetime.strptime('22.05.2024', '%d.%m.%Y')
+    print(*map(lambda x: x.strftime("%d.%m.%Y %H:%M"), s), sep='\n')
+    date_time = datetime.strptime('22.05.2024 12:30', '%d.%m.%Y %H:%M')
     print(f'Выбрано: {date_time}')
     this_id = window_id_by_title_and_date(session, title, date_time)
     print('this_id', this_id)

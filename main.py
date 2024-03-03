@@ -13,9 +13,10 @@ name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
 admins_dict = get_admins_ids_names_dict(session)
+admin_on_duty_tg_id = get_admin_id_by_name(session, 'Глеб')
 users_cache_dict: Dict[int, UserCache] = {}
 menu_buttons_text = my_markups.get_buttons_text()
-### дату и время!
+
 ### каскадное удаление - тест!
 
 @bot.message_handler(content_types=['text'])
@@ -71,10 +72,10 @@ def work(message):
         keyboard = types.InlineKeyboardMarkup()
         windows = sorted(get_all_current_windows(session), key=lambda window: window.date_time)
         for i, window in enumerate(windows):
-            if len(window.title) > 40:
-                text = window.title[:40] + '... ' + window.date_time.strftime('%d.%m.%Y')
+            if len(window.title) > 35:
+                text = window.title[:35] + '... ' + window.date_time.strftime('%d.%m.%Y %H:%M')
             else:
-                text = window.title + ' ' + window.date_time.strftime('%d.%m.%Y')
+                text = window.title + ' ' + window.date_time.strftime('%d.%m.%Y %H:%M')
             if window.contact_link:
                 text = '✅' + text
             else:
@@ -103,7 +104,7 @@ def user_choosing_excursion_window(call):
     elif call.data.startswith('user_excursion_choice'):
         excursion_id = int(call.data.split('.')[1])
         excursion_info = get_excursion_info_by_id(session, excursion_id) # title, description, duration
-        windows_ids_and_dates = [(x[0], x[1].strftime("%d.%m.%Y")) for x in
+        windows_ids_and_dates = [(x[0], x[1].strftime("%d.%m.%Y %H:%M")) for x in
                                  sorted(get_windows_ids_and_dates_by_excursion_id(session, excursion_id),
                                         key=lambda x: x[1])]
         keyboard = types.InlineKeyboardMarkup()
@@ -156,8 +157,9 @@ def confirm_new_visit(message):
     result = add_visit_into_window(session, info)
     if result:
         text = (f'🎉Поздравляю! Вы, {result.contact_name}, успешно записаны '
-                f'на {result.date_time.strftime("%d.%m.%Y")} на экскурсию!.\n'
+                f'на {result.date_time.strftime("%d.%m.%Y %H:%M")} на экскурсию!.\n'
                 f'Моя команда свяжется с вами в ближайшее время')
+        # bot.send_message(admin_on_duty_tg_id, 'Кря!!!')
     else:
         text = '❌Возникла ошибка! Попробуйте заново или обратитесь к администратору '
     bot.send_message(message.chat.id, text=text)
@@ -192,7 +194,7 @@ def admin_functions_entry(call):
         text = f'{window_info[0]}\n'
         text += f'Описание. {window_info[1]}\n'
         text += f'Длительность {window_info[2]} мин.\n'
-        text += f'{window_info[3].strftime("%d.%m.%Y")}\n'
+        text += f'{window_info[3].strftime("%d.%m.%Y %H:%M")}\n'
         if window_info[4]:
             text += f'Ссылка: {window_info[4]}\n'
             text += f'{window_info[5]}\n'
