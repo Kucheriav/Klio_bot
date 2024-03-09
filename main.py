@@ -7,7 +7,10 @@ from users_states import UserCache
 from keyboard_markups import my_markups
 from db_config_reader import read_config
 from datetime import datetime
+from log_writer import setup_logger
 
+
+logger = setup_logger(__name__)
 API_TOKEN = read_config(filename='config.ini', section='api')['key']
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
@@ -22,11 +25,17 @@ menu_buttons_text = my_markups.get_buttons_text()
 @bot.message_handler(content_types=['text'])
 def work(message):
     if message.text == '/start' and message.from_user.id in admins_dict:
+
+        logger.debug(f'{admins_dict[message.from_user.id]} started a dialog')
+
         text = f'Привет, администратор {admins_dict[message.from_user.id]}! Клио приветствует тебя👋\nЧто-то нужно?'
         bot.send_photo(message.chat.id, open('menu.jpg', 'rb'), caption=text)
         bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=my_markups.get_admin_menu())
 
     elif message.text == '/start':
+
+        logger.debug(f'new user started a dialog')
+
         text = 'Привет! 👋 Я - Клио! Я интерактивный помощник Исторического музея школы №13.'
         bot.send_photo(message.chat.id, open('menu.jpg', 'rb'), caption=text)
         bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=my_markups.get_user_menu())
@@ -92,6 +101,9 @@ def work(message):
 @bot.callback_query_handler(func=lambda call: 'user' in call.data)
 def user_choosing_excursion_window(call):
     if call.data == 'user_excursion_info':
+
+        logger.debug(f'{call.message.from_user.username} wants to read about all excursions')
+
         excursion_ids_and_names = sorted(list(get_current_excursions_ids_and_names(session)), key=lambda x: x[1])
         keyboard = types.InlineKeyboardMarkup()
         for i, id_and_name in enumerate(excursion_ids_and_names):
@@ -102,8 +114,12 @@ def user_choosing_excursion_window(call):
                               call.message.chat.id, call.message.id, reply_markup=keyboard)
     # по нажатию на конкретную экскурсию вываливаем актуальные даты
     elif call.data.startswith('user_excursion_choice'):
+
         excursion_id = int(call.data.split('.')[1])
         excursion_info = get_excursion_info_by_id(session, excursion_id) # title, description, duration
+
+        logger.debug(f'{call.message.from_user.username} chose {excursion_info[0]}')
+
         windows_ids_and_dates = [(x[0], x[1].strftime("%d.%m.%Y %H:%M")) for x in
                                  sorted(get_windows_ids_and_dates_by_excursion_id(session, excursion_id),
                                         key=lambda x: x[1])]
@@ -124,6 +140,9 @@ def user_choosing_excursion_window(call):
 
     # по нажатию на конкретную дату продолжаем ветку через register_next_step_handler, уточняем детали
     elif call.data.startswith('user_date_choice'):
+
+        logger.debug(f'{call.message.from_user.username} chose a date (id {call.data.split(".")[1]})')
+
         users_cache_dict[call.message.chat.id] = UserCache(datetime.now())
         users_cache_dict[call.message.chat.id].window_id = int(call.data.split('.')[1])
         text = 'Как вас записать? (укажите имя)'
@@ -133,12 +152,20 @@ def user_choosing_excursion_window(call):
 
 @bot.message_handler(content_types=['text'])
 def how_many(message):
+
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.chat.id} broke dialog chain before "how many"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
+
     users_cache_dict[message.chat.id].contact_name = message.text
     users_cache_dict[message.chat.id].contact_link = message.from_user.username
+
+    logger.debug(f'{message.from_user.username} named as {message.text}')
+
     text = "Сколько вас?"
     bot.send_message(message.chat.id, text)
     bot.register_next_step_handler(message, confirm_new_visit)
@@ -313,7 +340,7 @@ def del_excursion_confirm(call):
 @bot.callback_query_handler(func=lambda call: 'add_window' in call.data)
 def adding_new_window_question(call):
     excursion_id = call.data.split('.')[1]
-    bot.send_message(call.message.chat.id, 'Введите дату в формате дд.мм.гггг')
+    bot.send_message(call.message.chat.id, 'Введите дату в формате дд.мм.гггг чч:мм')
     bot.register_next_step_handler(call.message, adding_new_window_final, excursion_id)
 
 @bot.message_handler(content_types=['text'])
