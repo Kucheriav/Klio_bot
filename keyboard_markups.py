@@ -8,6 +8,8 @@ class MyMarkupsFabric:
     about_excursions_btn = types.KeyboardButton('❗Узнать про экскурсии и записаться')
     edit_excursion_btn = types.KeyboardButton("ℹ️Виды экскурсий")
     edit_timetable_btn = types.KeyboardButton("📝Расписание")
+    events_managment_btn = types.KeyboardButton("⏰Подписка на события")
+
 
     def get_user_menu(self):
         user_markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -16,8 +18,7 @@ class MyMarkupsFabric:
 
     def get_admin_menu(self):
         admin_markup = self.get_user_menu()
-        admin_markup.add(self.edit_excursion_btn)
-        admin_markup.add(self.edit_timetable_btn)
+        admin_markup.add(self.edit_excursion_btn, self.edit_timetable_btn, self.events_managment_btn)
         return admin_markup
 
     def get_buttons_text(self):

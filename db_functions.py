@@ -59,15 +59,25 @@ def get_all_users(session): # used in tests only
     return data
 
 
-def get_admins_ids_names_dict(session):
-    data = session.query(User.tg_id, User.name).filter(User.is_admin==True).all()
-    return {x[0]: x[1] for x in data}
+def get_admins(session):
+    admins = session.query(User).filter(User.is_admin == True).all()
+    return {x.tg_user_id: x for x in admins}
 
 
 def get_this_window(session, this_id) -> Schedule:
     data = session.query(Schedule).filter(Schedule.id == this_id).one()
     return data
 
+def update_user_chat_id(session, user_id, chat_id):
+    user = session.query(User).filter(User.tg_user_id == user_id).one()
+    user.tg_chat_id = chat_id
+    session.merge(user)
+    session.commit()
+
+def invert_event_listener_status(session, user: User):
+    user.is_tracking_events = bool((int(user.is_tracking_events) + 1) % 2)
+    session.merge(user)
+    session.commit()
 
 ### пользовательские функции
 ## начало ветки записи на посещение
@@ -213,11 +223,6 @@ def delete_window(session, window_id):
     window = session.query(Schedule).filter_by(id=window_id).one()
     session.delete(window)
     session.commit()
-
-
-def get_admin_id_by_name(session, name):
-    tg_id = session.query(User.tg_id).filter(User.name==name).one()
-    return tg_id
 
 
 if __name__ == '__main__':

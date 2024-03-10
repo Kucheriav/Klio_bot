@@ -1,5 +1,6 @@
 import telebot
 from telebot import types
+from telebot.types import Message, Chat, User, CallbackQuery
 from typing import Dict
 from time import sleep
 from db_functions import *
@@ -15,18 +16,19 @@ API_TOKEN = read_config(filename='config.ini', section='api')['key']
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
 session, _ = database_init()
-admins_dict = get_admins_ids_names_dict(session)
-admin_on_duty_tg_id = get_admin_id_by_name(session, 'Глеб')
+admins_dict = get_admins(session)
+events_listeners_chat_id_list = [admins_dict[x].tg_chat_id for x in admins_dict if admins_dict[x].is_tracking_events == True]
 users_cache_dict: Dict[int, UserCache] = {}
 menu_buttons_text = my_markups.get_buttons_text()
 
-### каскадное удаление - тест!
 
 @bot.message_handler(content_types=['text'])
-def work(message):
+def work(message: Message):
     if message.text == '/start' and message.from_user.id in admins_dict:
+        if not admins_dict[message.from_user.id].tg_chat_id or admins_dict[message.from_user.id].tg_chat_id != message.chat.id:
+            update_user_chat_id(session, message.from_user.id, message.chat.id)
 
-        logger.debug(f'{admins_dict[message.from_user.id]} started a dialog')
+        logger.debug(f'Admin {admins_dict[message.from_user.id].name} started a dialog')
 
         text = f'Привет, администратор {admins_dict[message.from_user.id]}! Клио приветствует тебя👋\nЧто-то нужно?'
         bot.send_photo(message.chat.id, open('menu.jpg', 'rb'), caption=text)
@@ -94,15 +96,27 @@ def work(message):
         bot.send_message(message.chat.id, "На данный момент указано следующее расписание: 👇",
                          reply_markup=keyboard)
 
+    elif message.text == my_markups.events_managment_btn.text:
+        keyboard = types.InlineKeyboardMarkup()
+        if message.chat.id in events_listeners_chat_id_list:
+            text = 'Сейчас вам приходят уведомления при записи на экскурсию. Нажмите кнопку, чтобы отписаться от обновлений'
+            unsign_button = types.InlineKeyboardButton(text='Отписаться', callback_data=f'events.no')
+            keyboard.add(unsign_button)
+        else:
+            text = 'Сейчас вам не приходят уведомления при записи на экскурсию. Нажмите кнопку, чтобы подписаться на обновления'
+            sign_button = types.InlineKeyboardButton(text='Подписаться', callback_data=f'events.yes')
+            keyboard.add(sign_button)
+        bot.send_message(message.chat.id, text, reply_markup=keyboard)
+
     else:
         bot.send_message(message.chat.id, "Я Вас не понимаю. Попробуйте ещё раз.")
 
 
 @bot.callback_query_handler(func=lambda call: 'user' in call.data)
-def user_choosing_excursion_window(call):
+def user_choosing_excursion_window(call: CallbackQuery):
     if call.data == 'user_excursion_info':
 
-        logger.debug(f'{call.message.from_user.username} wants to read about all excursions')
+        logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to read about all excursions')
 
         excursion_ids_and_names = sorted(list(get_current_excursions_ids_and_names(session)), key=lambda x: x[1])
         keyboard = types.InlineKeyboardMarkup()
@@ -118,7 +132,7 @@ def user_choosing_excursion_window(call):
         excursion_id = int(call.data.split('.')[1])
         excursion_info = get_excursion_info_by_id(session, excursion_id) # title, description, duration
 
-        logger.debug(f'{call.message.from_user.username} chose {excursion_info[0]}')
+        logger.debug(f'{call.from_user.username} from {call.message.chat.id} chose {excursion_info[0]}')
 
         windows_ids_and_dates = [(x[0], x[1].strftime("%d.%m.%Y %H:%M")) for x in
                                  sorted(get_windows_ids_and_dates_by_excursion_id(session, excursion_id),
@@ -131,6 +145,8 @@ def user_choosing_excursion_window(call):
         callback_button = types.InlineKeyboardButton(text='Вернуться к выбору экскурсии',
                                                      callback_data='user_excursion_info')
         keyboard.add(callback_button)
+        users_cache_dict[call.message.chat.id] = UserCache(datetime.now())
+        users_cache_dict[call.message.chat.id].excursion_name = excursion_info[0]
         text = ''
         text += excursion_info[0] + '\n'
         text += excursion_info[1] + '\n'
@@ -141,21 +157,21 @@ def user_choosing_excursion_window(call):
     # по нажатию на конкретную дату продолжаем ветку через register_next_step_handler, уточняем детали
     elif call.data.startswith('user_date_choice'):
 
-        logger.debug(f'{call.message.from_user.username} chose a date (id {call.data.split(".")[1]})')
+        logger.debug(f'{call.from_user.username} from {call.message.chat.id} chose a date (id {call.data.split(".")[1]})')
 
-        users_cache_dict[call.message.chat.id] = UserCache(datetime.now())
         users_cache_dict[call.message.chat.id].window_id = int(call.data.split('.')[1])
+
         text = 'Как вас записать? (укажите имя)'
         bot.send_message(call.message.chat.id, text)
         bot.register_next_step_handler(call.message, how_many)
 
 
 @bot.message_handler(content_types=['text'])
-def how_many(message):
+def how_many(message: Message):
 
     if message.text in menu_buttons_text:
 
-        logger.debug(f'{message.chat.id} broke dialog chain before "how many"')
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "how many"')
 
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
@@ -164,7 +180,7 @@ def how_many(message):
     users_cache_dict[message.chat.id].contact_name = message.text
     users_cache_dict[message.chat.id].contact_link = message.from_user.username
 
-    logger.debug(f'{message.from_user.username} named as {message.text}')
+    logger.debug(f'{message.from_user.username} from {message.chat.id} named as {message.text}')
 
     text = "Сколько вас?"
     bot.send_message(message.chat.id, text)
@@ -172,8 +188,11 @@ def how_many(message):
 
 
 @bot.message_handler(content_types=['text'])
-def confirm_new_visit(message):
+def confirm_new_visit(message: Message):
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "confirm_new_visit"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
@@ -183,17 +202,26 @@ def confirm_new_visit(message):
     # при успехе возвращаем объект окна расписания
     result = add_visit_into_window(session, info)
     if result:
+
+        logger.info(f'{message.from_user.username} from {message.chat.id} signed to {users_cache_dict[message.chat.id].window_id}')
+
         text = (f'🎉Поздравляю! Вы, {result.contact_name}, успешно записаны '
-                f'на {result.date_time.strftime("%d.%m.%Y %H:%M")} на экскурсию!.\n'
+                f'на {result.date_time.strftime("%d.%m.%Y %H:%M")} '
+                f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}!\n'
                 f'Моя команда свяжется с вами в ближайшее время')
-        # bot.send_message(admin_on_duty_tg_id, 'Кря!!!')
+        for admin in events_listeners_chat_id_list:
+            bot.send_message(admin, f'Трям! {message.from_user.username} записан на {result.date_time.strftime("%d.%m.%Y %H:%M")} '
+                                    f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}')
     else:
         text = '❌Возникла ошибка! Попробуйте заново или обратитесь к администратору '
     bot.send_message(message.chat.id, text=text)
 
 
 @bot.callback_query_handler(func=lambda call: 'admin' in call.data)
-def admin_functions_entry(call):
+def admin_functions_entry(call: CallbackQuery):
+
+    logger.debug(f'{call.from_user.username} from {call.message.chat.id} entered admin functions')
+
     if 'excursion_admin' in call.data:
         if 'add' in call.data:
             text = 'Введите название новой экскурсии'
@@ -237,8 +265,11 @@ def admin_functions_entry(call):
 
 
 @bot.message_handler(content_types=['text'])
-def new_excursion_ask_description(message):
+def new_excursion_ask_description(message: Message):
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "new_excursion_ask_description"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
@@ -248,8 +279,11 @@ def new_excursion_ask_description(message):
     bot.register_next_step_handler(message, new_excursion_ask_duration, temp)
 
 @bot.message_handler(content_types=['text'])
-def new_excursion_ask_duration(message, temp):
+def new_excursion_ask_duration(message: Message, temp):
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "new_excursion_ask_duration"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
@@ -259,23 +293,30 @@ def new_excursion_ask_duration(message, temp):
     bot.register_next_step_handler(message, new_excursion_final, temp)
 
 @bot.message_handler(content_types=['text'])
-def new_excursion_final(message, temp):
+def new_excursion_final(message: Message, temp):
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "new_excursion_final"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
     temp.append(message.text)
     res = add_excursion(session, temp)
     if res:
+        logger.info(f'{message.from_user.username} from {message.chat.id} added {temp[0]}')
         bot.send_message(message.chat.id, 'Успешно добавлено')
     else:
         bot.send_message(message.chat.id, 'Произошла ошибка')
 
 
 @bot.callback_query_handler(func=lambda call: 'edit_excursion' in call.data)
-def edit_excursion_question(call):
+def edit_excursion_question(call: CallbackQuery):
     topic, excursion_id = call.data.split('.')
     excursion_id = int(excursion_id)
+
+    logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to edit excursion')
+
     if topic == 'edit_excursion':
         text = 'Что вы хотите поменять?'
         keyboard = types.InlineKeyboardMarkup(row_width=1)
@@ -302,20 +343,28 @@ def edit_excursion_question(call):
 
 
 @bot.message_handler(content_types=['text'])
-def edit_excursion_finish(message, attribute_type, excursion_id):
+def edit_excursion_finish(message: Message, attribute_type, excursion_id):
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "edit_excursion_finish"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
     res = update_excursion_by_id(session, excursion_id, attribute_type, message)
     if res:
+        logger.info(f'{message.from_user.username} from {message.chat.id} updated '
+                    f'excursion info with {attribute_type}: {message.text[:25]}')
         bot.send_message(message.chat.id, text='Значение обновлено')
     else:
         bot.send_message(message.chat.id, text='Ошибка')
 
 
 @bot.callback_query_handler(func=lambda call: 'del_excursion' in call.data)
-def del_excursion_question(call):
+def del_excursion_question(call: CallbackQuery):
+
+    logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to delete excursion')
+
     excursion_id = call.data.split('.')[1]
     keyboard = types.InlineKeyboardMarkup()
     yes_btn = types.InlineKeyboardButton(text='Да', callback_data=f'yes_del_e.{excursion_id}')
@@ -325,11 +374,14 @@ def del_excursion_question(call):
 
 
 @bot.callback_query_handler(func=lambda call: 'yes_del_e' in call.data or 'no_del_e' in call.data)
-def del_excursion_confirm(call):
+def del_excursion_confirm(call: CallbackQuery):
     if 'yes' in call.data:
         excursion_id = call.data.split('.')[1]
         res = del_excursion(session, excursion_id)
         if res:
+
+            logger.info(f'{call.from_user.username} from {call.message.chat.id} deleted an excursion {excursion_id}')
+
             bot.send_message(call.message.chat.id, 'Экскурсия удалена')
         else:
             bot.send_message(call.message.chat.id, 'Возникла ошибка')
@@ -338,28 +390,43 @@ def del_excursion_confirm(call):
 
 
 @bot.callback_query_handler(func=lambda call: 'add_window' in call.data)
-def adding_new_window_question(call):
+def adding_new_window_question(call: CallbackQuery):
+
+    logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to add a window')
+
     excursion_id = call.data.split('.')[1]
     bot.send_message(call.message.chat.id, 'Введите дату в формате дд.мм.гггг чч:мм')
     bot.register_next_step_handler(call.message, adding_new_window_final, excursion_id)
 
 @bot.message_handler(content_types=['text'])
-def adding_new_window_final(message, excursion_id):
+def adding_new_window_final(message: Message, excursion_id):
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "adding_new_window_final"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
     if (t := check_date(message.text)) != 'ok':
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} input incorrect date {message.text}')
+
         bot.send_message(message.chat.id, t)
         return
     res = add_window(session, excursion_id, message.text)
     if res:
+
+        logger.info(f'{message.from_user.username} from {message.chat.id} added a new window at {message.text} ')
+
         bot.send_message(message.chat.id, 'Успешно добавлено новое "окошко"!')
     else:
         bot.send_message(message.chat.id, 'Возникла ошибка!')
 
 @bot.callback_query_handler(func=lambda call: 'edit_window' in call.data)
-def edit_window_date_question(call):
+def edit_window_date_question(call: CallbackQuery):
+
+    logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to edit a window date')
+
     topic, window_id = call.data.split('.')
     window_id = int(window_id)
     text = 'Введите новую дату:'
@@ -368,19 +435,34 @@ def edit_window_date_question(call):
 
 
 @bot.message_handler(content_types=['text'])
-def edit_window_date_finish(message, attribute_type, window_id):
+def edit_window_date_finish(message: Message, attribute_type, window_id):
     if message.text in menu_buttons_text:
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} broke dialog chain before "edit_window_date_finish"')
+
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
+    if (t := check_date(message.text)) != 'ok':
+
+        logger.debug(f'{message.from_user.username} from {message.chat.id} input incorrect date {message.text}')
+
+        bot.send_message(message.chat.id, t)
+        return
     res = update_window_by_id(session, window_id, attribute_type, message)
     if res:
+
+        logger.info(f'{message.from_user.username} from {message.chat.id} update a date:{message.text} ')
+
         bot.send_message(message.chat.id, text='Дата обновлена')
     else:
         bot.send_message(message.chat.id, text='Ошибка')
 
 @bot.callback_query_handler(func=lambda call: 'del_window' in call.data)
-def del_window_question(call):
+def del_window_question(call: CallbackQuery):
+
+    logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to del a window')
+
     window_id = int(call.message.text.split('.')[1])
     keyboard = types.InlineKeyboardMarkup()
     yes_btn = types.InlineKeyboardButton(text='Да', callback_data=f'yes_del_w.{window_id}')
@@ -389,16 +471,38 @@ def del_window_question(call):
     bot.send_message(call.message.chat.id, 'Вы уверены?', reply_markup=keyboard)
 
 @bot.callback_query_handler(func=lambda call: 'yes_del_w' in call.data or 'no_del_w' in call.data)
-def del_excursion_confirm(call):
+def del_window_confirm(call: CallbackQuery):
     if 'yes' in call.data:
-        excursion_id = call.data.split('.')[1]
-        res = del_excursion(session, excursion_id)
+        window_id = call.data.split('.')[1]
+        res = delete_window(session, window_id)
         if res:
+
+            logger.info(f'{call.from_user.username} from {call.message.chat.id} deleted a window {window_id}')
+
             bot.send_message(call.message.chat.id, 'Экскурсия удалена')
         else:
+
+            logger.warn(f'{call.from_user.username} from {call.message.chat.id} tried to del a window {window_id}')
+
             bot.send_message(call.message.chat.id, 'Возникла ошибка')
     else:
         bot.send_message(call.message.chat.id, 'Удаление отменено')
+
+@bot.callback_query_handler(func=lambda call: 'event' in call.data)
+def user_choosing_excursion_window(call):
+    answer = call.data.split('.')[1]
+    # print(call.from_user, call.message, call.chat_instance, sep='\n')
+    logger.info(f'{call.from_user.username} from {call.message.chat.id} switched his events listener status')
+    if answer == 'yes':
+        text = 'Поздравляю! Теперь вы подписаны на события!'
+        events_listeners_chat_id_list.append(call.message.chat.id)
+    else:
+        text = 'Поздравляю! Теперь вы отписаны от событий!'
+        events_listeners_chat_id_list.remove(call.message.chat.id)
+
+    invert_event_listener_status(session, admins_dict[call.from_user.id])
+    bot.send_message(call.message.chat.id, text)
+
 
 while True:
     try:

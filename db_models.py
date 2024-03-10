@@ -42,11 +42,19 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String(300))
     link = Column(String(100))
-    tg_id = Column(Integer())
+    tg_user_id = Column(Integer())
+    tg_chat_id = Column(Integer())
     is_admin = Column(Boolean())
+    is_tracking_events = Column(Boolean())
 
     def __str__(self):
-        return f'''{self.name}  {self.link}  {self.tg_id}  {self.is_admin}'''
+        res = []
+        for attr in dir(self):
+            if not attr.startswith('_') and attr not in ['metadata',  'registry']:
+                x = getattr(self, attr)
+                res.append(f'{attr}: {x}')
+        return ' '.join(res)
+
 
 
 

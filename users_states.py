@@ -13,6 +13,7 @@ class UserCache:
         self.contact_link = ''
         self.date_choice = ''
         self.window_id = ''
+        self.excursion_name = ''
 
 
 

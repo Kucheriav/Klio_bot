@@ -18,7 +18,8 @@ def add_test_admin_users(session):
     with open('test_users.txt', encoding='utf8') as file:
         users = [dict(map(lambda x: x.split('='), x)) for x in map(lambda x: x.strip().split('\n'), file.read().split('\n-#-\n'))]
     for user in users:
-        session.add(User(name=user['name'], link=user['link'], tg_id=int(user['tg_id']), is_admin=bool(int(user['is_admin']))))
+        session.add(User(name=user['name'], link=user['link'], tg_user_id=int(user['tg_id']),
+                         is_admin=bool(int(user['is_admin'])), is_tracking_events=False))
     session.commit()
 
 
@@ -51,16 +52,16 @@ def drop_db_scenario():
     session, engine = recreate_db()
     add_test_data(session)
     add_test_admin_users(session)
-    print(*get_all_users(session))
+    print(*get_all_users(session), sep='\n\n')
 
 
 def normal_init():
     session, engine = database_init()
-    print(get_all_excursion_info_by_id(session, 1))
+    print(*get_all_users(session), sep='\n\n')
 
 
 if __name__ == '__main__':
-    drop_db_scenario()
+    normal_init()
 
 
 
