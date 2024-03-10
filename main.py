@@ -30,7 +30,7 @@ def work(message: Message):
 
         logger.debug(f'Admin {admins_dict[message.from_user.id].name} started a dialog')
 
-        text = f'Привет, администратор {admins_dict[message.from_user.id]}! Клио приветствует тебя👋\nЧто-то нужно?'
+        text = f'Привет, администратор {admins_dict[message.from_user.id].name}! Клио приветствует тебя👋\nЧто-то нужно?'
         bot.send_photo(message.chat.id, open('menu.jpg', 'rb'), caption=text)
         bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=my_markups.get_admin_menu())
 
