@@ -61,7 +61,7 @@ def normal_init():
 
 
 if __name__ == '__main__':
-    normal_init()
+    drop_db_scenario()
 
 
 

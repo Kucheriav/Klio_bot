@@ -115,9 +115,7 @@ def work(message: Message):
 @bot.callback_query_handler(func=lambda call: 'user' in call.data)
 def user_choosing_excursion_window(call: CallbackQuery):
     if call.data == 'user_excursion_info':
-
         logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to read about all excursions')
-
         excursion_ids_and_names = sorted(list(get_current_excursions_ids_and_names(session)), key=lambda x: x[1])
         keyboard = types.InlineKeyboardMarkup()
         for i, id_and_name in enumerate(excursion_ids_and_names):
