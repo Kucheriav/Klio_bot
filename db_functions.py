@@ -2,12 +2,12 @@ from db_models import *
 from db_config_reader import read_config
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.sql import func
-from errors import *
+from sqlalchemy.exc import OperationalError
 from datetime import datetime
 from log_writer import setup_logger
-
+import inspect
 
 logger = None
 if not logger:
@@ -15,12 +15,22 @@ if not logger:
 
 
 def db_error_handler(func):
-    def wrapper(*args, **kwargs):
+    def wrapper(session, *args, **kwargs):
         try:
+            assert isinstance(session, Session)
             return func(*args, **kwargs)
+        except AssertionError as e:
+            logger.error(f"Function {inspect.currentframe().f_back.f_code.co_name} donthave session argument "
+                         f"that is demanded by error decorator", exc_info=True)
+        except OperationalError as e:
+            logger.error(f"OperationalError in function '{inspect.currentframe().f_back.f_code.co_name}: "
+                         f"{e}. Attempting to reconnect...")
+            session, engine = database_init()
+            return func(session, *args, **kwargs)
         except Exception as e:
             error_type = type(e).__name__
-            logger.error(f"Database error of type {error_type}: {str(e)}", exc_info=True)
+            logger.error(f"Database error of type {error_type} in function "
+                         f"'{inspect.currentframe().f_back.f_code.co_name}': {str(e)}", exc_info=True)
     return wrapper
 
 
