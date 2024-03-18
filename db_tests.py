@@ -10,7 +10,7 @@ def add_test_data(session):
     for excursion in new_excursions:
         session.add(Excursion(title=excursion[0], description=excursion[2], duration=excursion[1].split()[0]))
     for visit in open_visits:
-        session.add(Schedule(excursion_id=int(visit[0]), date_time=datetime.strptime(visit[1], '%d.%m.%Y %H:%M')))
+        session.add(Window(excursion_id=int(visit[0]), date_time=datetime.strptime(visit[1], '%d.%m.%Y %H:%M')))
 
     session.commit()
 
@@ -60,11 +60,16 @@ def normal_init():
     print(*get_all_users(session), sep='\n\n')
 
 def reading_from_scv():
-    session, engine = database_init()
-    read_excursion(session)
+    session, engine = recreate_db()
+    read_excursions(session)
+    read_windows(session)
+    add_test_admin_users(session)
+
+    print(*get_all_windows(session), sep='\n\n')
 
 if __name__ == '__main__':
     reading_from_scv()
+
 
 
 

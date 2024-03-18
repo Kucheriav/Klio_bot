@@ -66,7 +66,7 @@ def get_all_excursions(session):
 
 @db_error_handler
 def get_all_windows(session): # used in tests only
-    data = session.query(Schedule).all()
+    data = session.query(Window).all()
     return data
 
 
@@ -83,19 +83,18 @@ def get_admins(session):
 
 
 @db_error_handler
-def get_this_window(session, this_id) -> Schedule:
-    data = session.query(Schedule).filter(Schedule.id == this_id).one()
+def get_this_window(session, this_id) -> Window:
+    data = session.query(Window).filter(Window.id == this_id).one()
     return data
 
 
 @db_error_handler
-def get_excurions_id_by_title(session, title):
-    ex_id = session.query(Excursion.id).filter(Excursion.title == title).all()
-    print(ex_id)
+def get_excursions_id_by_title(session, title):
+    ex_id = session.query(Excursion.id).filter(Excursion.title == title).one()
     if ex_id:
-        return ex_id[0]
+        return True, ex_id[0]
     else:
-        print('krya!')
+        return False, title
 
 
 @db_error_handler
@@ -116,8 +115,8 @@ def invert_event_listener_status(session, user: User):
 ## начало ветки записи на посещение
 @db_error_handler
 def get_current_excursions_ids_and_names(session):
-    current_excursions_ids_and_names = (session.query(Excursion.id, Excursion.title).join(Schedule).
-            filter(Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all())
+    current_excursions_ids_and_names = (session.query(Excursion.id, Excursion.title).join(Window).
+                                        filter(Window.contact_link == '', Window.date_time >= datetime.now()).all())
 
     logger.debug('Found current_excursions_ids_and_names in DB')
 
@@ -135,8 +134,8 @@ def get_excursion_info_by_id(session, id):
 
 @db_error_handler
 def get_actual_dates_by_name(session, title): # used in tests only
-    dates = session.query(Schedule.date_time).join(Excursion).filter(Excursion.title == title,
-                                            Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all()
+    dates = session.query(Window.date_time).join(Excursion).filter(Excursion.title == title,
+                                                                   Window.contact_link == '', Window.date_time >= datetime.now()).all()
     dates = [x[0] for x in dates]
 
     logger.debug('Found actual_dates_by_name in DB')
@@ -146,8 +145,8 @@ def get_actual_dates_by_name(session, title): # used in tests only
 
 @db_error_handler
 def get_windows_ids_and_dates_by_excursion_id(session, id):
-    windows_ids_and_dates = session.query(Schedule.id, Schedule.date_time).join(Excursion).filter(Excursion.id == id,
-                                            Schedule.contact_link == '', Schedule.date_time >= datetime.now()).all()
+    windows_ids_and_dates = session.query(Window.id, Window.date_time).join(Excursion).filter(Excursion.id == id,
+                                                                                              Window.contact_link == '', Window.date_time >= datetime.now()).all()
 
     logger.debug('Found windows_ids_and_dates_by_excursion_id in DB')
 
@@ -157,15 +156,15 @@ def get_windows_ids_and_dates_by_excursion_id(session, id):
 @db_error_handler
 def window_id_by_title_and_date(session, title, date): # used in tests only
     date = datetime.strptime(date, '%d.%m.%Y %H:%M')
-    window_id = session.query(Schedule.id).join(Excursion).filter(Excursion.title == title,
-                                                                  Schedule.date_time == date).all()
+    window_id = session.query(Window.id).join(Excursion).filter(Excursion.title == title,
+                                                                Window.date_time == date).all()
 
     logger.debug('Found windows_ids_and_dates_by_excursion_id in DB')
 
     return window_id[0][0]
 
 @db_error_handler
-def add_visit_into_window(session, visit_info) -> Schedule:
+def add_visit_into_window(session, visit_info) -> Window:
     #visit_info = [window_id, contact_link, contact_name,  number]
     this_visit = get_this_window(session, visit_info[0])
     if this_visit.contact_link:
@@ -189,8 +188,8 @@ def add_visit_into_window(session, visit_info) -> Schedule:
 ####admin functions
 @db_error_handler
 def get_all_current_windows(session):
-    data = (session.query(Schedule.id, Excursion.title, Schedule.date_time, Schedule.contact_link).
-            join(Excursion).filter(Schedule.date_time >= datetime.now()).all())
+    data = (session.query(Window.id, Excursion.title, Window.date_time, Window.contact_link).
+            join(Excursion).filter(Window.date_time >= datetime.now()).all())
 
     logger.debug('Found all_current_windows in DB')
 
@@ -200,11 +199,11 @@ def get_all_current_windows(session):
 def get_all_excursion_info_by_id(session, id):
     delimiter = '-#-'
     data = session.query(Excursion.title, Excursion.description, Excursion.duration,
-                         func.group_concat(Schedule.date_time, delimiter).label('date_times'),
-                         func.group_concat(Schedule.contact_name, delimiter).label('contact_names'),
-                         func.group_concat(Schedule.contact_link, delimiter).label('contact_links'),
-                         func.group_concat(Schedule.visitors, delimiter).label('visitors')) \
-                 .join(Schedule, Excursion.id == Schedule.excursion_id) \
+                         func.group_concat(Window.date_time, delimiter).label('date_times'),
+                         func.group_concat(Window.contact_name, delimiter).label('contact_names'),
+                         func.group_concat(Window.contact_link, delimiter).label('contact_links'),
+                         func.group_concat(Window.visitors, delimiter).label('visitors')) \
+                 .join(Window, Excursion.id == Window.excursion_id) \
                  .filter(Excursion.id == id) \
                  .group_by(Excursion.title, Excursion.description, Excursion.duration) \
                  .one()
@@ -257,9 +256,9 @@ def del_excursion(session, excursion_id):
 @db_error_handler
 def get_window_info_by_id(session, window_id):
     window_info = (session.query(Excursion.title, Excursion.description, Excursion.duration,
-                            Schedule.date_time, Schedule.contact_link, Schedule.contact_name, Schedule.visitors).
-              join(Schedule, Excursion.id == Schedule.excursion_id).
-              filter(Schedule.id == window_id).one())
+                                 Window.date_time, Window.contact_link, Window.contact_name, Window.visitors).
+                   join(Window, Excursion.id == Window.excursion_id).
+                   filter(Window.id == window_id).one())
 
     logger.debug('Found window_info_by_id in DB')
 
@@ -269,7 +268,7 @@ def get_window_info_by_id(session, window_id):
 def add_window(session, excursion_id, date_time):
     try:
         date_time = datetime.strptime(date_time, '%d.%m.%Y %H:%M')
-        session.add(Schedule(
+        session.add(Window(
             excursion_id=excursion_id,
             date_time=date_time
         ))
@@ -284,7 +283,7 @@ def add_window(session, excursion_id, date_time):
 
 @db_error_handler
 def update_window_by_id(session, id, field_name, new_value):
-    window = session.query(Schedule).filter_by(id=id).first()
+    window = session.query(Window).filter_by(id=id).first()
     if window:
         setattr(window, field_name, new_value)
         session.commit()
@@ -297,7 +296,7 @@ def update_window_by_id(session, id, field_name, new_value):
 
 @db_error_handler
 def delete_window(session, window_id):
-    window = session.query(Schedule).filter_by(id=window_id).one()
+    window = session.query(Window).filter_by(id=window_id).one()
     session.delete(window)
     session.commit()
 

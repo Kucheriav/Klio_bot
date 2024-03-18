@@ -15,14 +15,14 @@ class Excursion(Base):
     duration = Column(String(60))
     UniqueConstraint('title')
 
-    schedules = relationship('Schedule', cascade='all, delete')
+    schedules = relationship('Window', cascade='all, delete')
 
     def __str__(self):
         return f'''{self.title}\n{self.description}\n{self.duration}'''
 
 #timetable
-class Schedule(Base):
-    __tablename__ = 'schedule'
+class Window(Base):
+    __tablename__ = 'window'
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     excursion_id = Column(Integer, ForeignKey('excursions.id'))
