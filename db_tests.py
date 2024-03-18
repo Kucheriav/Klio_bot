@@ -1,5 +1,5 @@
 from db_functions import *
-
+from data_reader import *
 
 def add_test_data(session):
     with open('test_data.txt', encoding='utf8') as file:
@@ -59,9 +59,12 @@ def normal_init():
     session, engine = database_init()
     print(*get_all_users(session), sep='\n\n')
 
+def reading_from_scv():
+    session, engine = database_init()
+    read_excursion(session)
 
 if __name__ == '__main__':
-    drop_db_scenario()
+    reading_from_scv()
 
 
 

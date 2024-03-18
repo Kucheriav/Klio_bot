@@ -89,6 +89,16 @@ def get_this_window(session, this_id) -> Schedule:
 
 
 @db_error_handler
+def get_excurions_id_by_title(session, title):
+    ex_id = session.query(Excursion.id).filter(Excursion.title == title).all()
+    print(ex_id)
+    if ex_id:
+        return ex_id[0]
+    else:
+        print('krya!')
+
+
+@db_error_handler
 def update_user_chat_id(session, user_id, chat_id):
     user = session.query(User).filter(User.tg_user_id == user_id).one()
     user.tg_chat_id = chat_id
