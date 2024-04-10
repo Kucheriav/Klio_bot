@@ -15,7 +15,9 @@ if not logger:
 
 
 def db_error_handler(func):
+    MAX_RECONNECT_ATTEMPTS = 3
     def wrapper(session, *args, **kwargs):
+        reconnect_attempts = 0
         try:
             assert isinstance(session, Session)
             return func(*args, **kwargs)
