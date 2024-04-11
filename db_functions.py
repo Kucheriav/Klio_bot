@@ -7,7 +7,7 @@ from sqlalchemy.sql import func
 from datetime import datetime
 from log_writer import setup_logger
 import inspect
-
+from typing import List
 
 engine = None
 logger = None
@@ -91,8 +91,9 @@ def get_all_excursions(session):
 
 @db_error_handler
 @database_session
-def get_all_windows(session): # used in tests only
-    data = session.query(Window).all()
+def get_all_windows(session):
+    data = session.query(Excursion.title, Window.date_time, Window.contact_link, Window.contact_name,
+                         Window.visitors).join(Excursion).all()
     return data
 
 

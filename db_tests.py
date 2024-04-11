@@ -1,6 +1,6 @@
 from db_functions import *
 from data_reader import *
-
+from data_writer import *
 
 @database_session
 def add_test_data(session):
@@ -19,10 +19,8 @@ def add_test_data(session):
 
 @database_session
 def add_test_admin_users(session):
-    print(4)
     with open('test_users.txt', encoding='utf8') as file:
         users = [dict(map(lambda x: x.split('='), x)) for x in map(lambda x: x.strip().split('\n'), file.read().split('\n-#-\n'))]
-    print()
     for user in users:
         session.add(User(name=user['name'], link=user['link'], tg_user_id=int(user['tg_id']),
                          is_admin=bool(int(user['is_admin'])), is_tracking_events=False))
@@ -41,7 +39,7 @@ def normal_init():
     print(*get_all_users(), sep='\n\n')
 
 
-def reading_from_scv():
+def reading_from_csv():
     recreate_db()
     read_excursions()
     print(*get_all_excursions(), sep='\n\n')
@@ -50,8 +48,13 @@ def reading_from_scv():
     add_test_admin_users()
 
 
+def write_to_csv():
+    # write_excursions_to_file()
+    write_windows_to_file()
+
+
 if __name__ == '__main__':
-    reading_from_scv()
+    write_to_csv()
 
 
 
