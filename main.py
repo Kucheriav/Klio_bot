@@ -1,6 +1,6 @@
 import telebot
 from telebot import types
-from telebot.types import Message, Chat, User, CallbackQuery
+from telebot.types import Message, CallbackQuery
 from typing import Dict
 from time import sleep
 from db_functions import *
@@ -15,9 +15,9 @@ logger = setup_logger(__name__)
 API_TOKEN = read_config(filename='config.ini', section='api')['key']
 name_tg = '@hist_museum_bot'
 bot = telebot.TeleBot(API_TOKEN)
-session, _ = database_init()
-admins_dict = get_admins(session)
-events_listeners_chat_id_list = [admins_dict[x].tg_chat_id for x in admins_dict if admins_dict[x].is_tracking_events == True]
+admins_dict = get_admins()
+events_listeners_chat_id_list = [admins_dict[x].tg_chat_id for x in admins_dict
+                                 if admins_dict[x].is_tracking_events is True]
 users_cache_dict: Dict[int, UserCache] = {}
 menu_buttons_text = my_markups.get_buttons_text()
 
@@ -25,8 +25,9 @@ menu_buttons_text = my_markups.get_buttons_text()
 @bot.message_handler(content_types=['text'])
 def work(message: Message):
     if message.text == '/start' and message.from_user.id in admins_dict:
-        if not admins_dict[message.from_user.id].tg_chat_id or admins_dict[message.from_user.id].tg_chat_id != message.chat.id:
-            update_user_chat_id(session, message.from_user.id, message.chat.id)
+        if not admins_dict[message.from_user.id].tg_chat_id or \
+                admins_dict[message.from_user.id].tg_chat_id != message.chat.id:
+            update_user_chat_id(message.from_user.id, message.chat.id)
 
         logger.debug(f'Admin {admins_dict[message.from_user.id].name} started a dialog')
 
@@ -43,11 +44,11 @@ def work(message: Message):
         bot.send_message(message.chat.id, 'Выберите одну из команд в меню: 👇', reply_markup=my_markups.get_user_menu())
 
     elif message.text == my_markups.about_museum_btn.text:
-        text = 'Исторический музей школы №13 создан в 2021 году. Свидетельство №20557 Музей имеет официальный статус, ' \
-               'зарегистрирован на портале Школьных музеев и имеет статус Школьного Музея Победы.\nТакже мы являемся' \
-               ' победителями Всероссийского конкурса школьных музеев "Школьный музей - взгляд в будущее".\nНаш музей ' \
-               'совсем молодой, поэтому оживление памяти в формате интерактивных опросов, креативных обзоров и ' \
-               'увлекательных экскурсий - это про нас!'
+        text = 'Исторический музей школы №13 создан в 2021 году. Свидетельство №20557. Музей имеет официальный ' \
+               'статус, зарегистрирован на портале Школьных музеев и имеет статус Школьного Музея Победы.\nТакже мы ' \
+               'являемся победителями Всероссийского конкурса школьных музеев "Школьный музей - взгляд в будущее".\n' \
+               'Наш музей совсем молодой, поэтому оживление памяти в формате интерактивных опросов, креативных ' \
+               'обзоров и увлекательных экскурсий - это про нас!'
         bot.send_message(message.chat.id, text)
 
     elif message.text == my_markups.about_bot_btn.text:
@@ -70,18 +71,20 @@ def work(message: Message):
 
     elif message.text == my_markups.edit_excursion_btn.text:
         keyboard = types.InlineKeyboardMarkup()
-        excursions = get_all_excursions(session)
+        excursions = get_all_excursions()
         for i, excursion in enumerate(excursions):
-            callback_button = types.InlineKeyboardButton(text=excursion.title, callback_data=f'excursion_admin.{excursion.id}')
+            callback_button = types.InlineKeyboardButton(text=excursion.title,
+                                                         callback_data=f'excursion_admin.{excursion.id}')
             keyboard.add(callback_button)
-        callback_button = types.InlineKeyboardButton(text='Добавить новый вид экскурсии', callback_data=f'excursion_admin.add')
+        callback_button = types.InlineKeyboardButton(text='Добавить новый вид экскурсии',
+                                                     callback_data=f'excursion_admin.add')
         keyboard.add(callback_button)
         bot.send_message(message.chat.id, "На данный момент указаны следующие экскурсии: 👇",
                          reply_markup=keyboard)
 
     elif message.text == my_markups.edit_timetable_btn.text:
         keyboard = types.InlineKeyboardMarkup()
-        windows = sorted(get_all_current_windows(session), key=lambda window: window.date_time)
+        windows = sorted(get_all_current_windows(), key=lambda window: window.date_time)
         for i, window in enumerate(windows):
             if len(window.title) > 35:
                 text = window.title[:35] + '... ' + window.date_time.strftime('%d.%m.%Y %H:%M')
@@ -99,11 +102,13 @@ def work(message: Message):
     elif message.text == my_markups.events_managment_btn.text:
         keyboard = types.InlineKeyboardMarkup()
         if message.chat.id in events_listeners_chat_id_list:
-            text = 'Сейчас вам приходят уведомления при записи на экскурсию. Нажмите кнопку, чтобы отписаться от обновлений'
+            text = 'Сейчас вам приходят уведомления при записи на экскурсию. ' \
+                   'Нажмите кнопку, чтобы отписаться от обновлений'
             unsign_button = types.InlineKeyboardButton(text='Отписаться', callback_data=f'events.no')
             keyboard.add(unsign_button)
         else:
-            text = 'Сейчас вам не приходят уведомления при записи на экскурсию. Нажмите кнопку, чтобы подписаться на обновления'
+            text = 'Сейчас вам не приходят уведомления при записи на экскурсию. ' \
+                   'Нажмите кнопку, чтобы подписаться на обновления'
             sign_button = types.InlineKeyboardButton(text='Подписаться', callback_data=f'events.yes')
             keyboard.add(sign_button)
         bot.send_message(message.chat.id, text, reply_markup=keyboard)
@@ -116,7 +121,7 @@ def work(message: Message):
 def user_choosing_excursion_window(call: CallbackQuery):
     if call.data == 'user_excursion_info':
         logger.debug(f'{call.from_user.username} from {call.message.chat.id} wants to read about all excursions')
-        excursion_ids_and_names = sorted(list(get_current_excursions_ids_and_names(session)), key=lambda x: x[1])
+        excursion_ids_and_names = sorted(list(get_current_excursions_ids_and_names()), key=lambda x: x[1])
         keyboard = types.InlineKeyboardMarkup()
         for i, id_and_name in enumerate(excursion_ids_and_names):
             callback_button = types.InlineKeyboardButton(text=id_and_name[1],
@@ -128,12 +133,12 @@ def user_choosing_excursion_window(call: CallbackQuery):
     elif call.data.startswith('user_excursion_choice'):
 
         excursion_id = int(call.data.split('.')[1])
-        excursion_info = get_excursion_info_by_id(session, excursion_id) # title, description, duration
+        excursion_info = get_excursion_info_by_id(excursion_id)  # title, description, duration
 
         logger.debug(f'{call.from_user.username} from {call.message.chat.id} chose {excursion_info[0]}')
 
         windows_ids_and_dates = [(x[0], x[1].strftime("%d.%m.%Y %H:%M")) for x in
-                                 sorted(get_windows_ids_and_dates_by_excursion_id(session, excursion_id),
+                                 sorted(get_windows_ids_and_dates_by_excursion_id(excursion_id),
                                         key=lambda x: x[1])]
         keyboard = types.InlineKeyboardMarkup()
         for i, window_id_and_date in enumerate(windows_ids_and_dates):
@@ -198,7 +203,7 @@ def confirm_new_visit(message: Message):
             users_cache_dict[message.chat.id].contact_name, message.text]
     # ожидаемые аргументы: сессия и [window_id, contact_link, contact_name, umber]
     # при успехе возвращаем объект окна расписания
-    result = add_visit_into_window(session, info)
+    result = add_visit_into_window(info)
     if result:
 
         logger.info(f'{message.from_user.username} from {message.chat.id} signed to {users_cache_dict[message.chat.id].window_id}')
@@ -208,7 +213,7 @@ def confirm_new_visit(message: Message):
                 f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}!\n'
                 f'Моя команда свяжется с вами в ближайшее время')
         for admin in events_listeners_chat_id_list:
-            bot.send_message(admin, f'Трям! {message.from_user.username} записан на {result.date_time.strftime("%d.%m.%Y %H:%M")} '
+            bot.send_message(admin, f'❗️❗️❗️❗️❗️ {message.from_user.username} записан на {result.date_time.strftime("%d.%m.%Y %H:%M")} '
                                     f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}')
     else:
         text = '❌Возникла ошибка! Попробуйте заново или обратитесь к администратору '
@@ -227,7 +232,7 @@ def admin_functions_entry(call: CallbackQuery):
             bot.register_next_step_handler(call.message, new_excursion_ask_description)
             return
         excursion_id = int(call.data.split('.')[1])
-        excursion_info_list = get_excursion_info_by_id(session, excursion_id)
+        excursion_info_list = get_excursion_info_by_id(excursion_id)
         text = f'Экскурсия: {excursion_info_list[0]}.\n'
         text += f'Описание: {excursion_info_list[1]}\n'
         text += f'Длительность: {excursion_info_list[2]} мин.\n'
@@ -243,7 +248,7 @@ def admin_functions_entry(call: CallbackQuery):
     elif 'window_admin' in call.data:
         window_id = int(call.data.split('.')[1])
         # -> [title, description, duration, date_time, contact_link, contact_name, visitors]
-        window_info = get_window_info_by_id(session, window_id)
+        window_info = get_window_info_by_id(window_id)
         text = f'{window_info[0]}\n'
         text += f'Описание. {window_info[1]}\n'
         text += f'Длительность {window_info[2]} мин.\n'
@@ -300,7 +305,7 @@ def new_excursion_final(message: Message, temp):
         bot.send_message(message.chat.id, text)
         return work(message)
     temp.append(message.text)
-    res = add_excursion(session, temp)
+    res = add_excursion(temp)
     if res:
         logger.info(f'{message.from_user.username} from {message.chat.id} added {temp[0]}')
         bot.send_message(message.chat.id, 'Успешно добавлено')
@@ -349,7 +354,7 @@ def edit_excursion_finish(message: Message, attribute_type, excursion_id):
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
-    res = update_excursion_by_id(session, excursion_id, attribute_type, message)
+    res = update_excursion_by_id(excursion_id, attribute_type, message)
     if res:
         logger.info(f'{message.from_user.username} from {message.chat.id} updated '
                     f'excursion info with {attribute_type}: {message.text[:25]}')
@@ -375,7 +380,7 @@ def del_excursion_question(call: CallbackQuery):
 def del_excursion_confirm(call: CallbackQuery):
     if 'yes' in call.data:
         excursion_id = call.data.split('.')[1]
-        res = del_excursion(session, excursion_id)
+        res = del_excursion(excursion_id)
         if res:
 
             logger.info(f'{call.from_user.username} from {call.message.chat.id} deleted an excursion {excursion_id}')
@@ -411,7 +416,7 @@ def adding_new_window_final(message: Message, excursion_id):
 
         bot.send_message(message.chat.id, t)
         return
-    res = add_window(session, excursion_id, message.text)
+    res = add_window(excursion_id, message.text)
     if res:
 
         logger.info(f'{message.from_user.username} from {message.chat.id} added a new window at {message.text} ')
@@ -447,7 +452,7 @@ def edit_window_date_finish(message: Message, attribute_type, window_id):
 
         bot.send_message(message.chat.id, t)
         return
-    res = update_window_by_id(session, window_id, attribute_type, message)
+    res = update_window_by_id(window_id, attribute_type, message)
     if res:
 
         logger.info(f'{message.from_user.username} from {message.chat.id} update a date:{message.text} ')
@@ -472,7 +477,7 @@ def del_window_question(call: CallbackQuery):
 def del_window_confirm(call: CallbackQuery):
     if 'yes' in call.data:
         window_id = call.data.split('.')[1]
-        res = delete_window(session, window_id)
+        res = delete_window(window_id)
         if res:
 
             logger.info(f'{call.from_user.username} from {call.message.chat.id} deleted a window {window_id}')
@@ -498,7 +503,7 @@ def user_choosing_excursion_window(call):
         text = 'Поздравляю! Теперь вы отписаны от событий!'
         events_listeners_chat_id_list.remove(call.message.chat.id)
 
-    invert_event_listener_status(session, admins_dict[call.from_user.id])
+    invert_event_listener_status(admins_dict[call.from_user.id])
     bot.send_message(call.message.chat.id, text)
 
 

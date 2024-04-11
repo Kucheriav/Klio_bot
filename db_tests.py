@@ -1,6 +1,7 @@
 from db_functions import *
 from data_reader import *
 
+@database_session
 def add_test_data(session):
     with open('test_data.txt', encoding='utf8') as file:
         new_excursions, open_visits = file.read().split('-#-')
@@ -14,9 +15,13 @@ def add_test_data(session):
 
     session.commit()
 
+
+@database_session
 def add_test_admin_users(session):
+    print(4)
     with open('test_users.txt', encoding='utf8') as file:
         users = [dict(map(lambda x: x.split('='), x)) for x in map(lambda x: x.strip().split('\n'), file.read().split('\n-#-\n'))]
+    print()
     for user in users:
         session.add(User(name=user['name'], link=user['link'], tg_user_id=int(user['tg_id']),
                          is_admin=bool(int(user['is_admin'])), is_tracking_events=False))
@@ -49,26 +54,25 @@ def straight_choosing_scenario():
     print(*bb, sep='\n')
 
 def drop_db_scenario():
-    session, engine = recreate_db()
-    add_test_data(session)
-    add_test_admin_users(session)
-    print(*get_all_users(session), sep='\n\n')
+    recreate_db()
+    add_test_data()
+    add_test_admin_users()
+    print(*get_all_users(), sep='\n\n')
 
 
 def normal_init():
     session, engine = database_init()
-    print(*get_all_users(session), sep='\n\n')
+    print(*get_all_users(), sep='\n\n')
 
 def reading_from_scv():
-    session, engine = recreate_db()
-    read_excursions(session)
-    read_windows(session)
-    add_test_admin_users(session)
-
-    print(*get_all_windows(session), sep='\n\n')
+    recreate_db()
+    read_excursions()
+    read_windows()
+    add_test_admin_users()
+    print(*get_all_windows(), sep='\n\n')
 
 if __name__ == '__main__':
-    reading_from_scv()
+    drop_db_scenario()
 
 
 
