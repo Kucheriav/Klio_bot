@@ -2,9 +2,8 @@ from db_models import *
 from db_config_reader import read_config
 from sqlalchemy_utils import database_exists, create_database, drop_database
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import func
-from sqlalchemy.exc import OperationalError
 from datetime import datetime
 from log_writer import setup_logger
 import inspect
@@ -49,7 +48,6 @@ def database_init():
     }
     global engine
     if engine is None:
-        print(1)
         engine = create_engine(url, pool_size=10, max_overflow=5)
         if not database_exists(engine.url):
             create_database(engine.url)
@@ -145,6 +143,7 @@ def invert_event_listener_status(session, user: User):
     session.merge(user)
     session.commit()
 
+
 ### пользовательские функции
 ## начало ветки записи на посещение
 @db_error_handler
@@ -192,6 +191,7 @@ def window_id_by_title_and_date(session, title, date): # used in tests only
                                                                 Window.date_time == date).all()
     logger.debug('Found windows_ids_and_dates_by_excursion_id in DB')
     return window_id[0][0]
+
 
 @db_error_handler
 @database_session
@@ -245,6 +245,7 @@ def get_all_excursion_info_by_id(session, id):
         temp[i] = temp[i][:-len(delimiter)].split(delimiter + ',')
     return list(data[:3]) + temp
 
+
 @db_error_handler
 @database_session
 def add_excursion(session, data):
@@ -258,6 +259,7 @@ def add_excursion(session, data):
         logger.debug('Add excursion in DB')
 
         return True
+
 
 @db_error_handler
 @database_session
@@ -273,6 +275,7 @@ def update_excursion_by_id(session, id, field_name, new_value):
     else:
         return False
 
+
 @db_error_handler
 @database_session
 def del_excursion(session, excursion_id):
@@ -286,6 +289,7 @@ def del_excursion(session, excursion_id):
         logger.debug('Deleted excursion in DB')
         return True
 
+
 @db_error_handler
 @database_session
 def get_window_info_by_id(session, window_id):
@@ -295,6 +299,7 @@ def get_window_info_by_id(session, window_id):
                    filter(Window.id == window_id).one())
     logger.debug('Found window_info_by_id in DB')
     return window_info
+
 
 @db_error_handler
 @database_session
@@ -312,6 +317,7 @@ def add_window(session, excursion_id, date_time):
         logger.debug('Add window in DB')
         return True
 
+
 @db_error_handler
 @database_session
 def update_window_by_id(session, id, field_name, new_value):
@@ -324,6 +330,7 @@ def update_window_by_id(session, id, field_name, new_value):
     else:
         return False
 
+
 @db_error_handler
 @database_session
 def delete_window(session, window_id):
@@ -334,7 +341,7 @@ def delete_window(session, window_id):
 
 
 if __name__ == '__main__':
-    session, engine = database_init()
-    print(*get_all_excursions(session), sep='\n')
+    database_init()
+    print(*get_all_excursions(), sep='\n')
 
 

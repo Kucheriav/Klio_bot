@@ -1,15 +1,17 @@
 from db_functions import *
-from csv import reader, writer
+from csv import reader
 from datetime import datetime
 
-def read_windows(session=None, filename='window_data_1803.csv'):
+
+@database_session
+def read_windows(session=None, filename='windows_data_1803.csv'):
     new_windows = list()
     with open(filename) as file:
         data = reader(file, delimiter=';')
         next(data)
         for line in data:
             title, date, time = map(lambda x: x.strip(), line)
-            excursion_id = get_excursions_id_by_title(session, title)
+            excursion_id = get_excursions_id_by_title(title)
             if excursion_id[0] is False:
                 print('There is no such an excursion in DB:', title)
                 continue
@@ -26,11 +28,11 @@ def read_windows(session=None, filename='window_data_1803.csv'):
                 continue
             else:
                 new_windows.append(window)
-    # print(*new_windows, sep='\n')
     session.add_all(new_windows)
     session.commit()
 
 
+@database_session
 def read_excursions(session=None, filename='excursion_data_1803.csv'):
     new_excursions = list()
     with open(filename) as file:

@@ -1,6 +1,7 @@
 from db_functions import *
 from data_reader import *
 
+
 @database_session
 def add_test_data(session):
     with open('test_data.txt', encoding='utf8') as file:
@@ -28,31 +29,6 @@ def add_test_admin_users(session):
     session.commit()
 
 
-def singing_to_visit():
-    id = '1'
-    contact_link = 'my_user1'
-    contact_name = 'Посетитель1'
-    number = '6'
-    visit_info = [id, contact_link, contact_name, number]
-    return visit_info
-
-def straight_choosing_scenario():
-    session, engine = database_init()
-    r = get_current_excursions_ids_and_names(session)
-    print(*r, sep='\n')
-    title = 'Фронтовая посуда'
-    print(f'Выбрано: {title}')
-    s = get_actual_dates_by_name(session, title)
-    print(*map(lambda x: x.strftime("%d.%m.%Y %H:%M"), s), sep='\n')
-    date_time = datetime.strptime('22.05.2024 12:30', '%d.%m.%Y %H:%M')
-    print(f'Выбрано: {date_time}')
-    this_id = window_id_by_title_and_date(session, title, date_time)
-    print('this_id', this_id)
-    res = add_visit_into_window(session, singing_to_visit())
-    print(res)
-    bb = get_all_windows(session)
-    print(*bb, sep='\n')
-
 def drop_db_scenario():
     recreate_db()
     add_test_data()
@@ -61,18 +37,21 @@ def drop_db_scenario():
 
 
 def normal_init():
-    session, engine = database_init()
+    database_init()
     print(*get_all_users(), sep='\n\n')
+
 
 def reading_from_scv():
     recreate_db()
     read_excursions()
+    print(*get_all_excursions(), sep='\n\n')
     read_windows()
-    add_test_admin_users()
     print(*get_all_windows(), sep='\n\n')
+    add_test_admin_users()
+
 
 if __name__ == '__main__':
-    drop_db_scenario()
+    reading_from_scv()
 
 
 
