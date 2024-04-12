@@ -4,10 +4,11 @@ from datetime import datetime
 
 
 @database_session
-def read_windows(session=None, filename='windows_data_1803.csv'):
+def read_windows(session=None, filename='window_data_1803.csv'):
     new_windows = list()
-    with open(filename) as file:
+    with open(filename, encoding='windows-1251') as file:
         data = reader(file, delimiter=';')
+        print(data)
         next(data)
         for line in data:
             title, date, time = map(lambda x: x.strip(), line)
@@ -35,7 +36,7 @@ def read_windows(session=None, filename='windows_data_1803.csv'):
 @database_session
 def read_excursions(session=None, filename='excursion_data_1803.csv'):
     new_excursions = list()
-    with open(filename) as file:
+    with open(filename, encoding='windows-1251') as file:
         data = reader(file, delimiter=';')
         next(data)
         for line in data:

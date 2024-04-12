@@ -54,7 +54,7 @@ def write_to_csv():
 
 
 if __name__ == '__main__':
-    write_to_csv()
+    reading_from_csv()
 
 
 
