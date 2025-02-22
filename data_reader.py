@@ -8,7 +8,6 @@ def read_windows(session=None, filename='window_data_1803.csv'):
     new_windows = list()
     with open(filename, encoding='windows-1251') as file:
         data = reader(file, delimiter=';')
-        print(data)
         next(data)
         for line in data:
             title, date, time = map(lambda x: x.strip(), line)
@@ -50,4 +49,5 @@ def read_excursions(session=None, filename='excursion_data_1803.csv'):
 
 
 if __name__ == '__main__':
-    pass
+    read_excursions()
+    read_windows()

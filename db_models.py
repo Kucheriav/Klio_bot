@@ -22,7 +22,7 @@ class Excursion(Base):
 
 #timetable
 class Window(Base):
-    __tablename__ = 'window'
+    __tablename__ = 'windows'
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     excursion_id = Column(Integer, ForeignKey('excursions.id'))
