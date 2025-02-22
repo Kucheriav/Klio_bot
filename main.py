@@ -82,22 +82,22 @@ def work(message: Message):
         bot.send_message(message.chat.id, "На данный момент указаны следующие экскурсии: 👇",
                          reply_markup=keyboard)
 
-    elif message.text == my_markups.edit_timetable_btn.text:
-        keyboard = types.InlineKeyboardMarkup()
-        windows = sorted(get_all_current_windows(), key=lambda window: window.date_time)
-        for i, window in enumerate(windows):
-            if len(window.title) > 35:
-                text = window.title[:35] + '... ' + window.date_time.strftime('%d.%m.%Y %H:%M')
-            else:
-                text = window.title + ' ' + window.date_time.strftime('%d.%m.%Y %H:%M')
-            if window.contact_link:
-                text = '✅' + text
-            else:
-                text = '☑️' + text
-            callback_button = types.InlineKeyboardButton(text=text, callback_data=f'window_admin.{window.id}')
-            keyboard.add(callback_button)
-        bot.send_message(message.chat.id, "На данный момент указано следующее расписание: 👇",
-                         reply_markup=keyboard)
+    # elif message.text == my_markups.edit_timetable_btn.text:
+    #     keyboard = types.InlineKeyboardMarkup()
+    #     windows = sorted(get_all_current_windows(), key=lambda window: window.date_time)
+    #     for i, window in enumerate(windows):
+    #         if len(window.title) > 35:
+    #             text = window.title[:35] + '... ' + window.date_time.strftime('%d.%m.%Y %H:%M')
+    #         else:
+    #             text = window.title + ' ' + window.date_time.strftime('%d.%m.%Y %H:%M')
+    #         if window.contact_link:
+    #             text = '✅' + text
+    #         else:
+    #             text = '☑️' + text
+    #         callback_button = types.InlineKeyboardButton(text=text, callback_data=f'window_admin.{window.id}')
+    #         keyboard.add(callback_button)
+    #     bot.send_message(message.chat.id, "На данный момент указано следующее расписание: 👇",
+    #                      reply_markup=keyboard)
 
     elif message.text == my_markups.events_managment_btn.text:
         keyboard = types.InlineKeyboardMarkup()
@@ -137,32 +137,36 @@ def user_choosing_excursion_window(call: CallbackQuery):
 
         logger.debug(f'{call.from_user.username} from {call.message.chat.id} chose {excursion_info[0]}')
 
-        windows_ids_and_dates = [(x[0], x[1].strftime("%d.%m.%Y %H:%M")) for x in
-                                 sorted(get_windows_ids_and_dates_by_excursion_id(excursion_id),
-                                        key=lambda x: x[1])]
+        # windows_ids_and_dates = [(x[0], x[1].strftime("%d.%m.%Y %H:%M")) for x in
+        #                          sorted(get_windows_ids_and_dates_by_excursion_id(excursion_id),
+        #                                 key=lambda x: x[1])]
         keyboard = types.InlineKeyboardMarkup()
-        for i, window_id_and_date in enumerate(windows_ids_and_dates):
-            callback_button = types.InlineKeyboardButton(text=window_id_and_date[1],
-                                                         callback_data=f'user_date_choice.{window_id_and_date[0]}')
-            keyboard.add(callback_button)
-        callback_button = types.InlineKeyboardButton(text='Вернуться к выбору экскурсии',
+        # for i, window_id_and_date in enumerate(windows_ids_and_dates):
+        #     callback_button = types.InlineKeyboardButton(text=window_id_and_date[1],
+        #                                                  callback_data=f'user_date_choice.{window_id_and_date[0]}')
+        #     keyboard.add(callback_button)
+
+        callback_button_yes = types.InlineKeyboardButton(text='Интересно, записывайте',
+                                                          callback_data='user_date_choice')
+        callback_button_back = types.InlineKeyboardButton(text='Вернуться к выбору экскурсии',
                                                      callback_data='user_excursion_info')
-        keyboard.add(callback_button)
+        keyboard.add(callback_button_yes, callback_button_back)
         users_cache_dict[call.message.chat.id] = UserCache(datetime.now())
         users_cache_dict[call.message.chat.id].excursion_name = excursion_info[0]
         text = ''
         text += excursion_info[0] + '\n'
         text += excursion_info[1] + '\n'
         text += 'Длительность: ' + excursion_info[2] + 'мин.\n'
-        text += "На данный момент можно записаться на следующие даты: 👇"
+        # text += "На данный момент можно записаться на следующие даты: 👇"
+        text += 'Заинтересованы?'
         bot.edit_message_text(text, call.message.chat.id, call.message.id, reply_markup=keyboard)
 
     # по нажатию на конкретную дату продолжаем ветку через register_next_step_handler, уточняем детали
     elif call.data.startswith('user_date_choice'):
 
-        logger.debug(f'{call.from_user.username} from {call.message.chat.id} chose a date (id {call.data.split(".")[1]})')
+        # logger.debug(f'{call.from_user.username} from {call.message.chat.id} chose a date (id {call.data.split(".")[1]})')
 
-        users_cache_dict[call.message.chat.id].window_id = int(call.data.split('.')[1])
+        # users_cache_dict[call.message.chat.id].window_id = int(call.data.split('.')[1])
 
         text = 'Как вас записать? (укажите имя)'
         bot.send_message(call.message.chat.id, text)
@@ -199,24 +203,22 @@ def confirm_new_visit(message: Message):
         text = 'Осуществляю возврат в стартовое меню. Процесс записи будет сброшен.'
         bot.send_message(message.chat.id, text)
         return work(message)
-    info = [users_cache_dict[message.chat.id].window_id, users_cache_dict[message.chat.id].contact_link,
-            users_cache_dict[message.chat.id].contact_name, message.text]
-    # ожидаемые аргументы: сессия и [window_id, contact_link, contact_name, umber]
+    info = [users_cache_dict[message.chat.id].contact_link, users_cache_dict[message.chat.id].contact_name, message.text]
+    # ожидаемые аргументы: сессия и [window_id, contact_link, contact_name, number]
     # при успехе возвращаем объект окна расписания
     result = add_visit_into_window(info)
-    if result:
+    # if result:
 
-        logger.info(f'{message.from_user.username} from {message.chat.id} signed to {users_cache_dict[message.chat.id].window_id}')
+    logger.info(f'{message.from_user.username} from {message.chat.id} signed to excursion')
 
-        text = (f'🎉Поздравляю! Вы, {result.contact_name}, успешно записаны '
-                f'на {result.date_time.strftime("%d.%m.%Y %H:%M")} '
-                f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}!\n'
-                f'Моя команда свяжется с вами в ближайшее время')
-        for admin in events_listeners_chat_id_list:
-            bot.send_message(admin, f'❗️❗️❗️❗️❗️ {message.from_user.username} записан на {result.date_time.strftime("%d.%m.%Y %H:%M")} '
-                                    f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}')
-    else:
-        text = '❌Возникла ошибка! Попробуйте заново или обратитесь к администратору '
+    text = (f'🎉Поздравляю! Вы, {users_cache_dict[message.chat.id].contact_name}, успешно записаны '
+            f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}!\n'
+            f'Наша команда свяжется с вами в ближайшее время')
+    for admin in events_listeners_chat_id_list:
+        bot.send_message(admin, f'❗️❗️❗️❗️❗️ @{message.from_user.username} записан на '
+                                f'на экскурсию {users_cache_dict[message.chat.id].excursion_name}')
+    # else:
+    #     text = '❌Возникла ошибка! Попробуйте заново или обратитесь к администратору '
     bot.send_message(message.chat.id, text=text)
 
 
@@ -241,9 +243,9 @@ def admin_functions_entry(call: CallbackQuery):
                                                         callback_data=f'edit_excursion.{excursion_id}')
         del_excursion_btn = types.InlineKeyboardButton(text='Удалить экскурсию',
                                                         callback_data=f'del_excursion.{excursion_id}')
-        add_window_btn = types.InlineKeyboardButton(text='Добавить окно в расписание',
-                                                    callback_data=f'add_window.{excursion_id}')
-        keyboard.add(edit_excursion_btn, del_excursion_btn, add_window_btn)
+        # add_window_btn = types.InlineKeyboardButton(text='Добавить окно в расписание',
+        #                                             callback_data=f'add_window.{excursion_id}')
+        keyboard.add(edit_excursion_btn, del_excursion_btn)
         bot.send_message(call.message.chat.id, text, reply_markup=keyboard)
     elif 'window_admin' in call.data:
         window_id = int(call.data.split('.')[1])

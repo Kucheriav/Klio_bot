@@ -150,8 +150,9 @@ def invert_event_listener_status(session, user: User):
 @db_error_handler
 @database_session
 def get_current_excursions_ids_and_names(session):
-    current_excursions_ids_and_names = (session.query(Excursion.id, Excursion.title).join(Window).
-                                        filter(Window.contact_link == '', Window.date_time >= datetime.now()).all())
+    # current_excursions_ids_and_names = (session.query(Excursion.id, Excursion.title).join(Window).
+    #                                     filter(Window.contact_link == '', Window.date_time >= datetime.now()).all())
+    current_excursions_ids_and_names = session.query(Excursion.id, Excursion.title).all()
     logger.debug('Found current_excursions_ids_and_names in DB')
     return set(current_excursions_ids_and_names)
 
@@ -343,6 +344,6 @@ def delete_window(session, window_id):
 
 if __name__ == '__main__':
     database_init()
-    print(*get_all_excursions(), sep='\n')
+    print(get_all_excursions())
 
 

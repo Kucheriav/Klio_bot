@@ -43,8 +43,8 @@ def reading_from_csv():
     recreate_db()
     read_excursions()
     print(*get_all_excursions(), sep='\n\n')
-    read_windows()
-    print(*get_all_windows(), sep='\n\n')
+    # read_windows()
+    # print(*get_all_windows(), sep='\n\n')
     add_test_admin_users()
 
 
